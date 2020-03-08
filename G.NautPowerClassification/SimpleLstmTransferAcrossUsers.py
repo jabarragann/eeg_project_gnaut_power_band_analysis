@@ -127,7 +127,7 @@ allUsers = ['ryan','jhony','jackie','juan']
 if __name__ == '__main__':
 
     resultsContainer2 = []
-    for testUser in ['ryan','jhony','jackie','juan']:
+    for testUser in ['jackie','juan','ryan','jhony']:
         resultsPath = './results/across-subject/'
         resultsFileName = resultsPath+'{:}_test.csv'.format(testUser)
         resultsContainer = []
@@ -195,7 +195,7 @@ if __name__ == '__main__':
 
                 ##Repeat this a few times
 
-                for i in range(2):
+                for i in range(4):
                     #Pick two random sessions for testing and the rest for re training
                     allTesting = np.array(list(testUserContainer.keys()))
                     idx = np.arange(allTesting.shape[0])
