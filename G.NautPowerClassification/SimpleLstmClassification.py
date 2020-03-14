@@ -139,23 +139,24 @@ def getDataSplitBySessionByTrial(datapath, timesteps=12):
 
     # Read all data files and concatenate them into a single dataframe.
     for f in files:
-        #Get Session and trial
-        sessId = re.findall("S[0-9]_T[0-9]", f)[0][-4]
-        trial = re.findall("S[0-9]_T[0-9]", f)[0][-1]
+        if f != "empty.py":
+            #Get Session and trial
+            sessId = re.findall("S[0-9]_T[0-9]", f)[0][-4]
+            trial = re.findall("S[0-9]_T[0-9]", f)[0][-1]
 
-        # Get data frame
-        d1 = pd.read_csv(datapath + f, sep=',', index_col=0)
-        # Get data and labels
-        X, y = d1[columnNames], d1['Label']
-        # Get Number of features
-        features = X.shape[1]
-        timesteps = timesteps
-        # Set data in LSTM format
-        new_X, new_y = series_to_supervised(X, y, n_in=(timesteps - 1), n_out=1, dropnan=True)
-        new_X = new_X.reshape((new_X.shape[0], timesteps, features))
-        # Append trial to dataset
-        dataContainer[sessId][trial]['X'] = new_X
-        dataContainer[sessId][trial]['y'] = new_y
+            # Get data frame
+            d1 = pd.read_csv(datapath + f, sep=',', index_col=0)
+            # Get data and labels
+            X, y = d1[columnNames], d1['Label']
+            # Get Number of features
+            features = X.shape[1]
+            timesteps = timesteps
+            # Set data in LSTM format
+            new_X, new_y = series_to_supervised(X, y, n_in=(timesteps - 1), n_out=1, dropnan=True)
+            new_X = new_X.reshape((new_X.shape[0], timesteps, features))
+            # Append trial to dataset
+            dataContainer[sessId][trial]['X'] = new_X
+            dataContainer[sessId][trial]['y'] = new_y
 
     return dataContainer
 
