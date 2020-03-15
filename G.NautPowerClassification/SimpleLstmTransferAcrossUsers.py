@@ -244,6 +244,7 @@ if __name__ == '__main__':
                     MINIBATCH =256
                     MODEL_NUMBER = 2
 
+
                     transferEarlyStopCallback = EarlyStoppingCallback(MODEL_NUMBER, additionalValSet=(testX, testY))
                     callbacks = [transferEarlyStopCallback]
                     transfer_history = model.fit(transferX, transferY, validation_data=(transferValX, transferValY),

@@ -51,6 +51,7 @@ class EarlyStoppingCallback(keras.callbacks.Callback):
         self.validationLosses = None
         self.validationAcc = None
 
+
         self.testingOnAdditionalSet = False
 
         if additionalValSet is not None:
@@ -132,7 +133,7 @@ if __name__ == '__main__':
                     trainY = np.concatenate(trainY)
 
                     #Augment transfer set by injecting random noise
-                    augmentedTraining = transferX + 0.3 * np.random.randn(*transferX.shape)
+                    augmentedTraining = transferX + 0.15 * np.random.randn(*transferX.shape)
                     transferX = np.concatenate((transferX, augmentedTraining))
                     transferY = np.concatenate((transferY, transferY))
 
@@ -179,6 +180,11 @@ if __name__ == '__main__':
                     TRANSFER_EPOCHS = 300
                     MINIBATCH = 256
                     MODEL_NUMBER = 2
+
+                    # Change model optimization algorithm
+                    optim = keras.optimizers.SGD(learning_rate=0.015, momentum=0.02, nesterov=False)
+                    lossFunc = keras.losses.categorical_crossentropy
+                    model.compile(optim, loss='categorical_crossentropy', metrics=['acc'])
 
                     transferEarlyStopCallback = EarlyStoppingCallback(MODEL_NUMBER, additionalValSet=(testX, testY))
                     callbacks = [transferEarlyStopCallback]

@@ -87,8 +87,9 @@ def getData(train=True):
     # Read all data files and concatenate them into a single dataframe.
     all = []
     for f in files:
-        d1 = pd.read_csv(datapath + f, sep=',', index_col=0)
-        all.append(d1)
+        if f != 'empty.py':
+            d1 = pd.read_csv(datapath + f, sep=',', index_col=0)
+            all.append(d1)
     dataset = pd.concat(all)
 
     X, y = dataset[columnNames].values, dataset['Label'].values
@@ -108,8 +109,8 @@ if __name__ == '__main__':
     X_test = X_test - meanVector
 
     # Convert labels to one-hot encoding
-    y_train = to_categorical(y_train)
-    y_test = to_categorical(y_test)
+    # y_train = to_categorical(y_train)
+    # y_test = to_categorical(y_test)
 
     #PCA dimensionality reduction
     # pca = PCA(n_components=140)
@@ -117,40 +118,40 @@ if __name__ == '__main__':
     # X_train = pca.transform(X_train)
     # X_test  = pca.transform(X_test)
 
-    # clf = RandomForestClassifier(n_estimators=2)
+    #clf = RandomForestClassifier(n_estimators=5)
     # clf = KNeighborsClassifier(n_neighbors=60)
-    # clf = SVC(gamma='auto')
+    clf = SVC(gamma='auto')
 
-    # clf.fit(X_train, y_train)
-    # y_hat = clf.predict(X_train)
-    # trainAcc = accuracy_score(y_train, y_hat)
-    # y_hat = clf.predict(X_test)
-    # testAcc = accuracy_score(y_test, y_hat)
-    # print("SVM training accuracy: {:.6f}".format(trainAcc))
-    # print("SVM testing accuracy: {:.6f}".format(testAcc))
+    clf.fit(X_train, y_train)
+    y_hat = clf.predict(X_train)
+    trainAcc = accuracy_score(y_train, y_hat)
+    y_hat = clf.predict(X_test)
+    testAcc = accuracy_score(y_test, y_hat)
+    print("SVM training accuracy: {:.6f}".format(trainAcc))
+    print("SVM testing accuracy: {:.6f}".format(testAcc))
 
 
     # Create model
-    model = createModel((X_train.shape[1],))
-    model.summary()
-
-    #Train model
-    history = model.fit(X_train, y_train, epochs=1500, batch_size=128, validation_data=(X_test, y_test), shuffle=True, verbose=1)
-
-    # Print Max accuracy
-    print("Training final accuracy: {:0.6f}".format(history.history['acc'][-1]) )
-    print("Testing final accuracy:  {:0.6f}".format(history.history['val_acc'][-1]) )
-    print("Training max accuracy:   {:0.6f}".format(max(history.history['acc'])) )
-    print("Testing max accuracy:    {:0.6f}".format(max(history.history['val_acc'])))
-
-    # Plot accuracy
-    fig, axes = plt.subplots(2, 1, sharex=True)
-    axes[0].plot(history.history['acc'], label='train acc')
-    axes[0].plot(history.history['val_acc'], label='test acc')
-    axes[1].plot(history.history['loss'], label='train loss')
-    axes[1].plot(history.history['val_loss'], label='test loss')
-    axes[0].legend()
-    axes[1].legend()
-    plt.show()
-
-    print('hello')
+    # model = createModel((X_train.shape[1],))
+    # model.summary()
+    #
+    # #Train model
+    # history = model.fit(X_train, y_train, epochs=500, batch_size=128, validation_data=(X_test, y_test), shuffle=True, verbose=1)
+    #
+    # # Print Max accuracy
+    # print("Training final accuracy: {:0.6f}".format(history.history['acc'][-1]) )
+    # print("Testing final accuracy:  {:0.6f}".format(history.history['val_acc'][-1]) )
+    # print("Training max accuracy:   {:0.6f}".format(max(history.history['acc'])) )
+    # print("Testing max accuracy:    {:0.6f}".format(max(history.history['val_acc'])))
+    #
+    # # Plot accuracy
+    # fig, axes = plt.subplots(2, 1, sharex=True)
+    # axes[0].plot(history.history['acc'], label='train acc')
+    # axes[0].plot(history.history['val_acc'], label='test acc')
+    # axes[1].plot(history.history['loss'], label='train loss')
+    # axes[1].plot(history.history['val_loss'], label='test loss')
+    # axes[0].legend()
+    # axes[1].legend()
+    # plt.show()
+    #
+    # print('hello')
