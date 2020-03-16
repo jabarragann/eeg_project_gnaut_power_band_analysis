@@ -239,6 +239,7 @@ if __name__ == '__main__':
                     trainY = to_categorical(trainY)
                     transferY = to_categorical(transferY)
                     testY = to_categorical(testY)
+                    valY = to_categorical(valY)
 
                     # Normalize data - with training set parameters
                     globalMean = trainX.mean(axis=(0, 1))
@@ -251,7 +252,7 @@ if __name__ == '__main__':
 
                     # Train Model - First round
                     model = lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
-                    history, model = trainTestModel(model, trainX, trainY, testX, testY)
+                    history, model = trainTestModel(model, trainX, trainY, valX, valY)
 
                     evalTestBefore = model.evaluate(testX, testY)
                     K.clear_session()
