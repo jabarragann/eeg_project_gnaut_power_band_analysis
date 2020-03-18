@@ -5,7 +5,10 @@ in the cross-session setting.
 Constraints of the experiment:
 1)Only data from one user will be in the testing set.
 2)The testing set will be a single session from the testing user.
-3)The rest of the sessions that are not going to be tested will be included in the validation set.
+3)Another session of the testing user is added to the validation set.
+4)The rest of the sessions of the testing user go to the training set.
+
+Training and validation have data from multiple users.
 
 The experiment is going to be repeated for every session of the testing user.
 
@@ -28,7 +31,7 @@ from itertools import product
 lowTrials  = ['1','3','5']
 highTrials = ['2','4','6']
 
-def trainTestModel(model, X_train, y_train, X_test, y_test, lr=None):
+def trainTestModel(model, X_train, y_train, X_val,y_val, X_test, y_test, lr=None):
     # Normalize data
     X_mean = np.mean(X_train, axis=(0, 1))
     X_std = np.std(X_train, axis = (0,1))
@@ -38,7 +41,7 @@ def trainTestModel(model, X_train, y_train, X_test, y_test, lr=None):
     print("Test Shape", X_test.shape)
 
     # Train model
-    batch = 256
+    batch = 256*2
     epochs = 300
 
     if lr is not None:
@@ -46,9 +49,14 @@ def trainTestModel(model, X_train, y_train, X_test, y_test, lr=None):
         optim = Adam(learning_rate = lr)
         model.compile(loss='categorical_crossentropy', optimizer=optim, metrics=['acc'])
 
-    history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch, validation_data=(X_test, y_test))
+    earlyStopCallback = EarlyStoppingCallback(2, additionalValSet=(X_test, y_test))
+    callbacks = [earlyStopCallback]
+    history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch, validation_data=(X_val, y_val), callbacks=callbacks)
 
-    return history, model
+    #Get best weights
+    model.set_weights(earlyStopCallback.bestWeights)
+
+    return history, model, earlyStopCallback
 
 #Create plot and save it
 def createPlot(trainingHistory, title, path, show_plot=False, earlyStopCallBack=None):
@@ -252,7 +260,8 @@ if __name__ == '__main__':
 
                     # Train Model - First round
                     model = lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
-                    history, model = trainTestModel(model, trainX, trainY, valX, valY)
+                    #model = lstmClf.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                    history, model, earlyStopping = trainTestModel(model, trainX, trainY, valX, valY, testX,testY)
 
                     evalTestBefore = model.evaluate(testX, testY)
                     K.clear_session()
@@ -261,7 +270,9 @@ if __name__ == '__main__':
                     fig, axes = plt.subplots(2, 1, sharex=True)
                     axes[0].set_title('{:}_test_{:}_{:}_{:}_before'.format(testUser, testingKey, lt, ht))
                     axes[0].plot(history.history['acc'], label='train acc')
-                    axes[0].plot(history.history['val_acc'], label='test acc')
+                    axes[0].plot(history.history['val_acc'], label='val acc')
+                    axes[0].plot(earlyStopping.validationAcc2, label = 'test acc')
+                    axes[0].axvline(earlyStopping.epochOfMaxValidation, 0, 1)
                     axes[0].set_ylim([0.5, 1])
                     axes[1].plot(history.history['loss'], label='train loss')
                     axes[1].plot(history.history['val_loss'], label='test loss')
@@ -313,7 +324,7 @@ if __name__ == '__main__':
                     #Save all the results
                     data = {testUser: [ testUser, logger[0], " ".join([str(t) for t in logger[1]])
                                         , logger[2], testingKey,lt,ht
-                                        ,history.history['val_acc'][-1], evalTestBefore[1], evalTestAfter[1]]}
+                                        ,max(history.history['val_acc']), evalTestBefore[1], evalTestAfter[1]]}
 
                     df1 = pd.DataFrame.from_dict(data, orient='index',
                                                  columns=['user','others','others_train','others_val','test_session',

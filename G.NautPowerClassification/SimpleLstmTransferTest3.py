@@ -1,3 +1,17 @@
+'''
+In the following script, I am going to train the models using data from a single user.
+
+Constraints of the experiment:
+1)Only one session of the user will be in the testing set.
+2)A randomly choose session is used as a validation set
+2)The rest of the sessions will be used for the training set.
+3)Two trials of the testing session will be used as a transfer set.
+
+The experiment is going to be repeated for every session of the testing user.
+
+Conclusion:
+'''
+
 import SimpleLstmClassification as lstmClf
 import numpy as np
 from tensorflow.keras.utils import to_categorical
@@ -14,18 +28,17 @@ lowTrials  = ['1','3','5']
 highTrials = ['2','4','6']
 
 
-def trainTestModel(model, X_train, y_train, X_test, y_test, lr=None):
+def trainTestModel(model, X_train, y_train, X_val,y_val, X_test, y_test, lr=None):
     # Normalize data
     X_mean = np.mean(X_train, axis=(0, 1))
     X_std = np.std(X_train, axis = (0,1))
-
 
     # Print data shape
     print("Train Shape", X_train.shape)
     print("Test Shape", X_test.shape)
 
     # Train model
-    batch = 256
+    batch = 256*2
     epochs = 300
 
     if lr is not None:
@@ -33,9 +46,14 @@ def trainTestModel(model, X_train, y_train, X_test, y_test, lr=None):
         optim = Adam(learning_rate = lr)
         model.compile(loss='categorical_crossentropy', optimizer=optim, metrics=['acc'])
 
-    history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch, validation_data=(X_test, y_test))
+    earlyStopCallback = EarlyStoppingCallback(2, additionalValSet=(X_test, y_test))
+    callbacks = [earlyStopCallback]
+    history = model.fit(X_train, y_train, epochs=epochs, batch_size=batch, validation_data=(X_val, y_val), callbacks=callbacks)
 
-    return history, model
+    #Get best weights
+    model.set_weights(earlyStopCallback.bestWeights)
+
+    return history, model, earlyStopCallback
 
 #Auxiliary classes
 class EarlyStoppingCallback(keras.callbacks.Callback):
@@ -91,7 +109,7 @@ class EarlyStoppingCallback(keras.callbacks.Callback):
 if __name__ == '__main__':
 
     # user = 'jhony','jackie','ryan','juan'
-    for user in ['juan']:
+    for user in [ 'jhony','jackie','ryan','juan']:
         resultsPath = './results/results_transfer3/'
         resultsFileName = resultsPath+'{:}_test.csv'.format(user)
         resultsContainer = []
@@ -111,6 +129,7 @@ if __name__ == '__main__':
 
                 for lt,ht in arr[idx]:
                     # Get testing trials and transfer trials
+                    #Use 2 of the trials for the transfer set and the rest for the testing set.
                     testTrials = np.array(list(dataContainer[testingKey].keys()))
                     idx =  np.argwhere(testTrials == lt), np.argwhere(testTrials == ht)
                     testTrials = np.delete(testTrials, idx)
@@ -121,11 +140,20 @@ if __name__ == '__main__':
                     testX = np.concatenate([dataContainer[testingKey][i]['X'] for i in testTrials])
                     testY = np.concatenate([dataContainer[testingKey][i]['y'] for i in testTrials])
 
-                    # Use the rest of the sessions for training.
+                    #Select randomly one session for validation
+                    import random
+                    availableSessions = list(dataContainer.keys())
+                    availableSessions.remove(testingKey)
+                    validationSession = random.choice(availableSessions)
+                    availableSessions.remove(validationSession)
+
+                    valX = np.concatenate([dataContainer[validationSession][i]['X'] for i in dataContainer[validationSession].keys()])
+                    valY = np.concatenate([dataContainer[validationSession][i]['y'] for i in dataContainer[validationSession].keys()])
+
+                    # Use the rest of the sessions for the first round of training.
                     trainX, trainY = [], []
-                    for trainingKey in dataContainer.keys():
+                    for trainingKey in availableSessions:
                         for trialKey in dataContainer[trainingKey].keys():
-                            if trainingKey != testingKey:
                                 trainX.append(dataContainer[trainingKey][trialKey]['X'])
                                 trainY.append(dataContainer[trainingKey][trialKey]['y'])
 
@@ -139,6 +167,7 @@ if __name__ == '__main__':
 
                     # Convert labels to one-hot encoding
                     trainY = to_categorical(trainY)
+                    valY = to_categorical(valY)
                     transferY = to_categorical(transferY)
                     testY = to_categorical(testY)
 
@@ -147,12 +176,15 @@ if __name__ == '__main__':
                     X_std = np.std(trainX, axis=(0, 1))
 
                     trainX = (trainX - X_mean) / (X_std + 1e-18)
+                    valX = (valX - X_mean)/ (X_std + 1e-18)
                     transferX = (transferX - X_mean) / (X_std + 1e-18)
                     testX = (testX - X_mean) / (X_std + 1e-18)
 
                     # Train Model
-                    model = lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
-                    history, model = trainTestModel(model, trainX, trainY, testX, testY)
+                    #model = lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
+                    model = lstmClf.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+
+                    history, model, earlyStopping = trainTestModel(model, trainX, trainY,valX,valY, testX, testY)
                     evalTrain0 = model.evaluate(trainX, trainY)
                     evalTest0 = model.evaluate(testX, testY)
                     K.clear_session()
@@ -162,7 +194,9 @@ if __name__ == '__main__':
                     fig, axes = plt.subplots(2, 1, sharex=True)
                     axes[0].set_title('{:}_test_{:}_{:}_{:}_before'.format(user, testingKey,lt,ht))
                     axes[0].plot(history.history['acc'], label='train acc')
-                    axes[0].plot(history.history['val_acc'], label='test acc')
+                    axes[0].plot(history.history['val_acc'], label='val acc')
+                    axes[0].plot(earlyStopping.validationAcc2, label='test acc')
+                    axes[0].axvline(earlyStopping.epochOfMaxValidation, 0, 1)
                     axes[0].set_ylim([0.5, 1])
                     axes[1].plot(history.history['loss'], label='train loss')
                     axes[1].plot(history.history['val_loss'], label='test loss')
@@ -215,9 +249,13 @@ if __name__ == '__main__':
 
                     # Add results
                     difference = transferHistory.history['val_acc'][-1] - history.history['val_acc'][-1]
-                    data = {testingKey: [testingKey,lt,ht, history.history['val_acc'][-1], transferHistory.history['val_acc'][-1], difference]}
+                    data = {testingKey: [testingKey,validationSession,
+                                         lt,ht, max(history.history['val_acc']), evalTestBefore,
+                                         transferHistory.history['val_acc'][-1], difference]}
                     df1 = pd.DataFrame.from_dict(data, orient='index',
-                                                 columns=['test_session', 'low_trial','high_trial','test_acc_before', 'test_acc_after','Difference'])
+                                                 columns=['test_session','validation_session',
+                                                          'low_trial','high_trial','max validation','test_acc_before',
+                                                          'test_acc_after','Difference'])
                     resultsContainer.append(df1)
 
 

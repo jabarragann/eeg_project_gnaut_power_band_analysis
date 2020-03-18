@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras import regularizers, constraints
 
 #Lstm mode to test
-def createLstmModel(isBidirectional=True, inputLayerNeurons= 8, inputLayerDropout=0.5, lstmSize = 4):
+def createAdvanceLstmModel(isBidirectional=True, inputLayerNeurons= 64, inputLayerDropout=0.3, lstmSize = 4):
     timesteps = 12
     features = 150
 
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     testX =   (testX-globalMean)/(globalStd + 1e-18)
 
     # create model
-    model = createLstmModel(isBidirectional=True, inputLayerNeurons= 64, inputLayerDropout=0.3, lstmSize = 4)
+    model = createAdvanceLstmModel(isBidirectional=True, inputLayerNeurons= 64, inputLayerDropout=0.3, lstmSize = 4)
 
     #Train model
     history = model.fit(trainX,trainY,validation_data=(testX,testY), epochs=120, batch_size=512, verbose=1)

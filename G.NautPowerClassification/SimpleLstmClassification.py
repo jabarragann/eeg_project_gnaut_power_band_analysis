@@ -2,10 +2,10 @@ from typing import Any
 
 import pandas as pd
 from tensorflow import keras
-from tensorflow.keras.layers import Dense, Input, BatchNormalization, Dropout, Softmax,LSTM
+from tensorflow.keras.layers import Dense, Input, BatchNormalization, Dropout, Softmax,LSTM, Bidirectional
 from tensorflow.keras.models import Model
 from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.regularizers import l1
+from tensorflow.keras import regularizers
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 import pandas as pd
@@ -169,6 +169,36 @@ def lstm2(timesteps,features):
     batchNorm1 = BatchNormalization()(dropout2)
 
     hidden2 = LSTM(4, stateful=False, dropout=0.5)(batchNorm1)
+    hidden3 = Dense(2, activation='linear')(hidden2)
+    networkOutput = Softmax()(hidden3)
+
+    model1 = Model(inputs=networkInput, outputs=networkOutput)
+    model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+
+    return model1
+
+def createAdvanceLstmModel(timesteps, features, isBidirectional=True, inputLayerNeurons= 64, inputLayerDropout=0.3, lstmSize = 4):
+    timesteps = timesteps
+    features = features
+
+    #Input layer
+    networkInput = Input(shape=(timesteps, features))
+    dropout1 = Dropout(rate=inputLayerDropout)(networkInput)
+
+    #First Hidden layer
+    hidden1 = Dense(inputLayerNeurons, activation='relu')(dropout1)
+    dropout2 = Dropout(rate=0.5)(hidden1)
+    batchNorm1 = BatchNormalization()(dropout2)
+
+    #Choose if the network should be bidirectional
+    if isBidirectional:
+        lstmLayer = LSTM(lstmSize, stateful=False,
+                         dropout=0.5, kernel_regularizer=regularizers.l2(0.05))
+        #hidden2 = Bidirectional( LSTM(lstmSize, stateful=False, dropout=0.5), merge_mode='concat' ) (batchNorm1)
+        hidden2 = Bidirectional( lstmLayer, merge_mode='concat' ) (batchNorm1)
+    else:
+        hidden2 = LSTM(lstmSize, stateful=False, dropout=0.5) (batchNorm1)
+
     hidden3 = Dense(2, activation='linear')(hidden2)
     networkOutput = Softmax()(hidden3)
 
