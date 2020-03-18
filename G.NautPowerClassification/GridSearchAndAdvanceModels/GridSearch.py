@@ -59,34 +59,36 @@ def getData():
     return trainX, trainY
 
 
-# fix random seed for reproducibility
-seed = 7
-np.random.seed(seed)
+if __name__ == '__main__':
 
-# Load data
-X,Y = getData()
+    # fix random seed for reproducibility
+    seed = 7
+    np.random.seed(seed)
 
-# create model
-model = KerasClassifier(build_fn=createLstmModel, epochs=100, batch_size=256, verbose=1)
+    # Load data
+    X,Y = getData()
 
-# define the grid search parameters
-isBidirec = [True, False]
-param_grid = dict(inputLayerNeurons= [8, 32, 64], inputLayerDropout=[0.1, 0.3, 0.5], lstmSize = [4, 14, 24])
+    # create model
+    model = KerasClassifier(build_fn=createLstmModel, epochs=100, batch_size=256, verbose=1)
 
-#Execute the GridSearch
-grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=1, cv=2)
+    # define the grid search parameters
+    isBidirec = [True, False]
+    param_grid = dict(inputLayerNeurons= [8, 32, 64], inputLayerDropout=[0.1, 0.3, 0.5], lstmSize = [4, 14, 24])
 
-grid_result = grid.fit(X, Y)
+    #Execute the GridSearch
+    grid = GridSearchCV(estimator=model, param_grid=param_grid, n_jobs=1, cv=2)
 
-# summarize results
-print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
-means = grid_result.cv_results_['mean_test_score']
-stds = grid_result.cv_results_['std_test_score']
-params = grid_result.cv_results_['params']
-for mean, stdev, param in zip(means, stds, params):
-    print("%f (%f) with: %r" % (mean, stdev, param))
+    grid_result = grid.fit(X, Y)
 
-f = open('./gridResult.pickle','wb')
-results = {'cv_results':grid_result.cv_results_, 'best_params':grid_result.best_params_,'best_score_' :grid_result.best_score_}
-pickle.dump(results, f)
-f.close()
+    # summarize results
+    print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+    means = grid_result.cv_results_['mean_test_score']
+    stds = grid_result.cv_results_['std_test_score']
+    params = grid_result.cv_results_['params']
+    for mean, stdev, param in zip(means, stds, params):
+        print("%f (%f) with: %r" % (mean, stdev, param))
+
+    f = open('./gridResult.pickle','wb')
+    results = {'cv_results':grid_result.cv_results_, 'best_params':grid_result.best_params_,'best_score_' :grid_result.best_score_}
+    pickle.dump(results, f)
+    f.close()
