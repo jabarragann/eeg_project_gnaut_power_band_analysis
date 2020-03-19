@@ -27,7 +27,8 @@ EEG_channels = [
                     "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
                     "PZ","P4","P8","PO3","PO4","OZ"]
 
-Power_coefficients = ['Low', 'Delta','Theta','Alpha','Beta']
+#Power_coefficients = ['Low', 'Delta','Theta','Alpha','Beta']
+Power_coefficients = ['Theta','Alpha','Beta']
 
 
 def series_to_supervised(data, labels, n_in=1, n_out=1, dropnan=True):

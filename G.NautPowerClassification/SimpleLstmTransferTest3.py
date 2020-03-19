@@ -109,6 +109,7 @@ class EarlyStoppingCallback(keras.callbacks.Callback):
 if __name__ == '__main__':
 
     # user = 'jhony','jackie','ryan','juan'
+    resultsContainer2 = []
     for user in [ 'jhony','jackie','ryan','juan']:
         resultsPath = './results/results_transfer3/'
         resultsFileName = resultsPath+'{:}_test.csv'.format(user)
@@ -181,8 +182,8 @@ if __name__ == '__main__':
                     testX = (testX - X_mean) / (X_std + 1e-18)
 
                     # Train Model
-                    #model = lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
-                    model = lstmClf.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                    model = lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
+                    #model = lstmClf.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
 
                     history, model, earlyStopping = trainTestModel(model, trainX, trainY,valX,valY, testX, testY)
                     evalTrain0 = model.evaluate(trainX, trainY)
@@ -249,14 +250,15 @@ if __name__ == '__main__':
 
                     # Add results
                     difference = transferHistory.history['val_acc'][-1] - history.history['val_acc'][-1]
-                    data = {testingKey: [testingKey,validationSession,
+                    data = {testingKey: [user,testingKey,validationSession,
                                          lt,ht, max(history.history['val_acc']), evalTestBefore,
                                          transferHistory.history['val_acc'][-1], difference]}
                     df1 = pd.DataFrame.from_dict(data, orient='index',
-                                                 columns=['test_session','validation_session',
+                                                 columns=['user','test_session','validation_session',
                                                           'low_trial','high_trial','max validation','test_acc_before',
                                                           'test_acc_after','Difference'])
                     resultsContainer.append(df1)
+                    resultsContainer2.append(df1)
 
 
         finally:
@@ -270,3 +272,6 @@ if __name__ == '__main__':
                 finalDf.to_csv(resultsPath + 'temp_{:}.csv'.format(user), index=False)
 
             # print("Finally Clause")
+
+    finalDf = pd.concat(resultsContainer2)
+    finalDf.to_csv(resultsPath + 'complete.csv', index=False)
