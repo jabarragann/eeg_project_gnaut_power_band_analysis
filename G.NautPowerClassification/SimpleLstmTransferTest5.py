@@ -109,11 +109,11 @@ class EarlyStoppingCallback(keras.callbacks.Callback):
             self.validationAcc2.append(evaluation[1])
 
 
-def getDataFromEverybody():
+def getDataFromEverybody(pBase):
 
     result = {}
     for u1 in allUsers:
-        path = './data/users/{:}/'.format(u1)
+        path = './data/{:}/{:}/'.format(pBase, u1)
         result[u1] = lstmClf.getDataSplitBySession(path)
     return result
 
@@ -123,7 +123,8 @@ if __name__ == '__main__':
     resultsContainer2 = []
 
     #Create dictionary of all users
-    dataOfAllUsers = getDataFromEverybody()
+    pBase = 'usersEEGLab'
+    dataOfAllUsers = getDataFromEverybody(pBase)
 
     for user in [ 'jhony','jackie','ryan','juan']:
 
@@ -230,11 +231,11 @@ if __name__ == '__main__':
                 K.clear_session()
 
                 # Add results
-                data = {testingKey: [user,testingKey,validationKey, trainingKey, earlyStopping.epochOfMaxValidation,
+                data = {testingKey: [pBase,user,testingKey,validationKey, trainingKey, earlyStopping.epochOfMaxValidation,
                                      max(history.history['val_acc']), evalTest0[1]]}
 
                 df1 = pd.DataFrame.from_dict(data, orient='index',
-                                             columns=['user','test_session','validation_session',' training_session',
+                                             columns=['preprocessing','user','test_session','validation_session',' training_session',
                                                       'epoch of max','validationAcc', 'testAcc'])
                 resultsContainer.append(df1)
                 resultsContainer2.append(df1)

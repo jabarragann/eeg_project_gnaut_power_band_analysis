@@ -299,33 +299,33 @@ if __name__ == '__main__':
 
                     transferEarlyStopCallback = EarlyStoppingCallback(MODEL_NUMBER, additionalValSet=(testX, testY))
                     callbacks = [transferEarlyStopCallback]
-                    transferHistory = model.fit(transferX, transferY, validation_data=(testX, testY),
-                                                epochs=TRANSFER_EPOCHS, batch_size=MINIBATCH, verbose=1,
-                                                callbacks=callbacks,
-                                                shuffle=True)
+                    # transferHistory = model.fit(transferX, transferY, validation_data=(testX, testY),
+                    #                             epochs=TRANSFER_EPOCHS, batch_size=MINIBATCH, verbose=1,
+                    #                             callbacks=callbacks,
+                    #                             shuffle=True)
 
                     evalTestAfter = model.evaluate(testX, testY)
                     K.clear_session()
 
                     # Plot results
-                    fig, axes = plt.subplots(2, 1, sharex=True)
-                    axes[0].set_title('{:}_test_{:}_{:}_{:}after'.format(testUser, testingKey, lt, ht))
-                    axes[0].plot(transferHistory.history['acc'], label='train acc')
-                    axes[0].plot(transferHistory.history['val_acc'], label='test acc')
-                    axes[0].set_ylim([0.5, 1])
-                    axes[1].plot(transferHistory.history['loss'], label='train loss')
-                    axes[1].plot(transferHistory.history['val_loss'], label='test loss')
-                    axes[0].legend()
-                    axes[1].legend()
-
-                    # plt.show()
-
-                    # Save Plot
-                    plt.savefig(plotImageRootName + '{:}_{:}_{:}_b_after.png'.format(testingKey, lt, ht))
-                    plt.close(fig)
+                    # fig, axes = plt.subplots(2, 1, sharex=True)
+                    # axes[0].set_title('{:}_test_{:}_{:}_{:}after'.format(testUser, testingKey, lt, ht))
+                    # axes[0].plot(transferHistory.history['acc'], label='train acc')
+                    # axes[0].plot(transferHistory.history['val_acc'], label='test acc')
+                    # axes[0].set_ylim([0.5, 1])
+                    # axes[1].plot(transferHistory.history['loss'], label='train loss')
+                    # axes[1].plot(transferHistory.history['val_loss'], label='test loss')
+                    # axes[0].legend()
+                    # axes[1].legend()
+                    #
+                    # # plt.show()
+                    #
+                    # # Save Plot
+                    # plt.savefig(plotImageRootName + '{:}_{:}_{:}_b_after.png'.format(testingKey, lt, ht))
+                    # plt.close(fig)
 
                     #Save all the results
-                    data = {testUser: [p, testUser, logger[0], " ".join([str(t) for t in logger[1]])
+                    data = {testUser: [pBase, testUser, logger[0], " ".join([str(t) for t in logger[1]])
                                         , logger[2], testingKey,lt,ht
                                         ,max(history.history['val_acc']), evalTestBefore[1], evalTestAfter[1]]}
 
