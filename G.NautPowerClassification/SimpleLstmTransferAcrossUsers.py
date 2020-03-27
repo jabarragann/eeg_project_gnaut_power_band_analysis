@@ -37,7 +37,7 @@ def trainTestModel(X_train, y_train, X_test, y_test, features=None, timesteps=No
     batch = 256
     epochs = 300
 
-    model = lstmClf.lstm2(*(timesteps, features))
+    model = getNewModel(*(timesteps, features))
 
     if lr is not None:
         print("Change Learning rate to ", lr)
@@ -123,6 +123,10 @@ class EarlyStoppingCallback(keras.callbacks.Callback):
             self.validationLoss2.append(evaluation[0])
             self.validationAcc2.append(evaluation[1])
 
+def getNewModel(a,b):
+    return lstmClf.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+    #return lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
+
 allUsers = ['ryan','jhony','jackie','juan']
 if __name__ == '__main__':
 
@@ -197,7 +201,7 @@ if __name__ == '__main__':
 
                 ##Repeat this a few times
 
-                for i in range(4):
+                for i in range(3):
                     #Pick two random sessions for testing and the rest for re training
                     allTesting = np.array(list(testUserContainer.keys()))
                     idx = np.arange(allTesting.shape[0])
@@ -269,7 +273,7 @@ if __name__ == '__main__':
                     maxTransferVal = transferEarlyStopCallback.maxValidationAcc
 
                     #Train model from scratch
-                    scratchModel = lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
+                    scratchModel = getNewModel(*(trainX.shape[1], trainX.shape[2]))
 
                     scratchEarlyStopCallback = EarlyStoppingCallback(MODEL_NUMBER, additionalValSet=(testX, testY))
                     callbacks = [scratchEarlyStopCallback]
