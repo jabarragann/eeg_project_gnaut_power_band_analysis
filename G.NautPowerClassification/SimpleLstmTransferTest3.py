@@ -116,7 +116,9 @@ if __name__ == '__main__':
         resultsContainer = []
         plotImageRootName = resultsPath + '{:}_test_'.format(user)
 
-        path = './data/users/{:}/'.format(user)
+        #Set of data - either normal (users) or eeglab (usersEEGLab)
+        p = 'users'
+        path = './data/{:}/{:}/'.format(p,user)
         dataContainer = lstmClf.getDataSplitBySessionByTrial(path)
 
         try:
@@ -250,11 +252,11 @@ if __name__ == '__main__':
 
                     # Add results
                     difference = transferHistory.history['val_acc'][-1] - history.history['val_acc'][-1]
-                    data = {testingKey: [user,testingKey,validationSession,
+                    data = {testingKey: [p,user,testingKey,validationSession,
                                          lt,ht, max(history.history['val_acc']), evalTestBefore,
                                          transferHistory.history['val_acc'][-1], difference]}
                     df1 = pd.DataFrame.from_dict(data, orient='index',
-                                                 columns=['user','test_session','validation_session',
+                                                 columns=['Preprocess','user','test_session','validation_session',
                                                           'low_trial','high_trial','max validation','test_acc_before',
                                                           'test_acc_after','Difference'])
                     resultsContainer.append(df1)

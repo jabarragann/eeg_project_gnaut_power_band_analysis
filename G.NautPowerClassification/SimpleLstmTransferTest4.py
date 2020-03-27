@@ -147,8 +147,11 @@ if __name__ == '__main__':
         resultsContainer = []
         plotImageRootName = resultsPath + '{:}_test_'.format(testUser)
 
+        # Set of data - either normal (users) or eeglab (usersEEGLab)
+        p = 'usersEEGLab'
+
         #Get test user data
-        path = './data/users/{:}/'.format(testUser)
+        path = './data/{:}/{:}/'.format(p,testUser)
         testUserContainer = lstmClf.getDataSplitBySessionByTrial(path)
 
         #Build training and validation sets
@@ -259,8 +262,8 @@ if __name__ == '__main__':
                     testX = (testX - globalMean) / (globalStd + 1e-18)
 
                     # Train Model - First round
-                    model = lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
-                    #model = lstmClf.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                    # model = lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
+                    model = lstmClf.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
                     history, model, earlyStopping = trainTestModel(model, trainX, trainY, valX, valY, testX,testY)
 
                     evalTestBefore = model.evaluate(testX, testY)
@@ -322,12 +325,12 @@ if __name__ == '__main__':
                     plt.close(fig)
 
                     #Save all the results
-                    data = {testUser: [ testUser, logger[0], " ".join([str(t) for t in logger[1]])
+                    data = {testUser: [p, testUser, logger[0], " ".join([str(t) for t in logger[1]])
                                         , logger[2], testingKey,lt,ht
                                         ,max(history.history['val_acc']), evalTestBefore[1], evalTestAfter[1]]}
 
                     df1 = pd.DataFrame.from_dict(data, orient='index',
-                                                 columns=['user','others','others_train','others_val','test_session',
+                                                 columns=['preprocess','user','others','others_train','others_val','test_session',
                                                           'low_trial', 'high_trial','validation', 'testBefore','testAfter'])
                     resultsContainer.append(df1)
                     resultsContainer2.append(df1)

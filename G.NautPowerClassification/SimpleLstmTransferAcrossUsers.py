@@ -127,6 +127,8 @@ allUsers = ['ryan','jhony','jackie','juan']
 if __name__ == '__main__':
 
     resultsContainer2 = []
+
+    #Select 1 test user
     for testUser in ['jackie','juan','ryan','jhony']:
         resultsPath = './results/across-subject/'
         resultsFileName = resultsPath+'{:}_test.csv'.format(testUser)
@@ -136,7 +138,7 @@ if __name__ == '__main__':
         path = './data/users/{:}/'.format(testUser)
         testUserContainer = lstmClf.getDataSplitBySession(path)
 
-        #Build training and validation sets
+        #Build training and validation. The test user is not included in these sets.
         trainingUsers = copy.copy(allUsers)
         trainingUsers.remove(testUser)
 
@@ -218,8 +220,8 @@ if __name__ == '__main__':
                     transferY = to_categorical(transferY)
 
                     #Normalize data across-time
-                    globalTransferMean = transferX.mean(axis=(0, 1))
-                    globalTransferStd = transferX.std(axis=(0, 1))
+                    # globalTransferMean = transferX.mean(axis=(0, 1))
+                    # globalTransferStd = transferX.std(axis=(0, 1))
 
                     # transferX    = (transferX - globalTransferMean) / (globalTransferStd + 1e-18)
                     # transferValX = (transferValX - globalTransferMean) / (globalTransferStd + 1e-18)

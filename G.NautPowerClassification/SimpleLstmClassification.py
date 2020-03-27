@@ -169,7 +169,7 @@ def lstm2(timesteps,features):
     dropout2 = Dropout(rate=0.5)(hidden1)
     batchNorm1 = BatchNormalization()(dropout2)
 
-    hidden2 = LSTM(4, stateful=False, dropout=0.5)(batchNorm1)
+    hidden2 = Bidirectional( LSTM(4, stateful=False, dropout=0.5))(batchNorm1)
     hidden3 = Dense(2, activation='linear')(hidden2)
     networkOutput = Softmax()(hidden3)
 
