@@ -148,10 +148,10 @@ if __name__ == '__main__':
         plotImageRootName = resultsPath + '{:}_test_'.format(testUser)
 
         # Set of data - either normal (users) or eeglab (usersEEGLab)
-        p = 'usersEEGLab'
+        pBase = 'usersEEGLab'
 
         #Get test user data
-        path = './data/{:}/{:}/'.format(p,testUser)
+        path = './data/{:}/{:}/'.format(pBase,testUser)
         testUserContainer = lstmClf.getDataSplitBySessionByTrial(path)
 
         #Build training and validation sets
@@ -167,7 +167,7 @@ if __name__ == '__main__':
         logger = [[],[],[]]
         for u in trainingUsers:
             #Open user data
-            p = './data/users/{:}/'.format(u)
+            p = './data/{:}/{:}/'.format(pBase, u)
             dataContainer = lstmClf.getDataSplitBySession(p)
 
             #Choose randomly 4 sessions for testing and 1 for validation
