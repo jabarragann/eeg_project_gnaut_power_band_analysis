@@ -5,6 +5,9 @@ Gets to 99.25% test accuracy after 12 epochs
 '''
 
 from __future__ import print_function
+
+import time
+
 import tensorflow.keras as keras
 from tensorflow.keras.datasets import mnist
 from tensorflow.keras.models import Sequential
@@ -59,11 +62,17 @@ model.compile(loss=keras.losses.categorical_crossentropy,
               optimizer=keras.optimizers.Adadelta(),
               metrics=['accuracy'])
 
+beginTime = time.time()
+
 model.fit(x_train, y_train,
           batch_size=batch_size,
           epochs=epochs,
           verbose=1,
           validation_data=(x_test, y_test))
+endTime = time.time()
+
+
 score = model.evaluate(x_test, y_test, verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
+print((endTime-beginTime)/epochs)

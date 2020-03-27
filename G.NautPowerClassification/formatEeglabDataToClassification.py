@@ -104,5 +104,5 @@ if __name__ == '__main__':
                     print("Number of samples {:d}".format(counter))
 
                     powerBandDataset = pd.DataFrame.from_dict(dataDict, orient='index', columns=newColumnNames)
-                    powerBandDataset.to_csv('./data/usersEEGLab/{:}/'.format(user)+ file[:-16]+'_pow_eeglab.txt', sep=',')
+                    powerBandDataset.to_csv('./data/usersEEGLab/{:}/'.format(user)+ file[:-16]+'pow_eeglab.txt', sep=',')
                     break

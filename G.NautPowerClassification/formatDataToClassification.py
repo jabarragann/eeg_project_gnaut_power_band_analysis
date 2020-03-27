@@ -19,7 +19,8 @@ if __name__ == '__main__':
     #Sample frequency
     sf = 250
 
-    dataPath = './raw_data/jackie/'
+    user = 'ryan'
+    dataPath = './raw_data/{:}/'.format(user)
     # dataPath = './raw_data_eeglab/'
 
     files = os.listdir(dataPath)
@@ -84,5 +85,5 @@ if __name__ == '__main__':
                     print(counter)
 
                     powerBandDataset = pd.DataFrame.from_dict(dataDict, orient='index', columns=newColumnNames)
-                    powerBandDataset.to_csv('./data/data/'+ file[:-8]+'pow.txt', sep=',')
+                    powerBandDataset.to_csv('./data/users/{:}/'.format(user)+ file[:-8]+'pow.txt', sep=',')
                     break
