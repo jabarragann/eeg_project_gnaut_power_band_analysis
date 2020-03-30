@@ -26,83 +26,85 @@ if __name__ == '__main__':
     sf = 250
 
     user = 'jhony'
-    dataPath = './raw_data_eeglab/{}/'.format(user)
-    dataPathRaw = './raw_data/{}/'.format(user)
 
-    files = os.listdir(dataPath)
-    newColumnNames = [x+'-'+y for x,y in product(EEG_channels, Power_coefficients)] + ['Label']
-    print(newColumnNames)
+    for user in ['juan','jackie','ryan','jhony']:
+        dataPath = './raw_data_eeglab/{}/'.format(user)
+        dataPathRaw = './raw_data/{}/'.format(user)
 
-    for file in files:
-        if file != 'empty.py' and len(re.findall('csv|Ticaed',file)) == 0 :
+        files = os.listdir(dataPath)
+        newColumnNames = [x+'-'+y for x,y in product(EEG_channels, Power_coefficients)] + ['Label']
+        print(newColumnNames)
 
-            trial = re.findall("S[0-9]_T[0-9]", file)
-            trial = int(trial[0][-1])
-            session = re.findall("S[0-9]", file)
-            session = int(session[0][-1])
-            print(file, session, trial)
+        for file in files:
+            if file != 'empty.py' and len(re.findall('csv|Ticaed',file)) == 0 :
 
-            eeglabData = pd.read_csv(dataPath + file, sep='\t')
+                trial = re.findall("S[0-9]_T[0-9]", file)
+                trial = int(trial[0][-1])
+                session = re.findall("S[0-9]", file)
+                session = int(session[0][-1])
+                print(file, session, trial)
 
-            #Read raw file to get timestamps and label
-            rawData = pd.read_csv(dataPathRaw + '{}_S{}_T{}_epoc.txt'.format(user,session,trial), sep=',')
+                eeglabData = pd.read_csv(dataPath + file, sep='\t')
 
-            #Remove data points before the starting signal and after the ending signal.
-            startIdx = rawData[rawData['markerValue'] == 'started'].index.values[0]
-            finishIdx = rawData[rawData['markerValue'] == 'finished'].index.values[0]
-            rawData = rawData[startIdx:finishIdx+1]
+                #Read raw file to get timestamps and label
+                rawData = pd.read_csv(dataPathRaw + '{}_S{}_T{}_epoc.txt'.format(user,session,trial), sep=',')
 
-            eegData = eeglabData[EEG_channels_EEGLAB].values
+                #Remove data points before the starting signal and after the ending signal.
+                startIdx = rawData[rawData['markerValue'] == 'started'].index.values[0]
+                finishIdx = rawData[rawData['markerValue'] == 'finished'].index.values[0]
+                rawData = rawData[startIdx:finishIdx+1]
 
-            eegLabel = rawData["label"].values
-            eegEvents = rawData["markerValue"].values
-            eegWindows = rawData["5SecondWindow"].values
+                eegData = eeglabData[EEG_channels_EEGLAB].values
 
-            print(rawData.shape[0],eegData.shape[0])
-            #Get Initial index
-            for i in range(0, len(eegEvents)):
-                if eegEvents[i] == 'started':
-                    for j in range(i, len(eegEvents)):
-                        if eegEvents[j] == 'active' or eegEvents[j] == 'not_active':
-                            initialIdx = j
-                            break
-                    break
+                eegLabel = rawData["label"].values
+                eegEvents = rawData["markerValue"].values
+                eegWindows = rawData["5SecondWindow"].values
 
-            counter = 0
-            dataDict = {}
+                print(rawData.shape[0],eegData.shape[0])
+                #Get Initial index
+                for i in range(0, len(eegEvents)):
+                    if eegEvents[i] == 'started':
+                        for j in range(i, len(eegEvents)):
+                            if eegEvents[j] == 'active' or eegEvents[j] == 'not_active':
+                                initialIdx = j
+                                break
+                        break
 
-            for j in range(initialIdx, len(eegEvents)):
-                if eegWindows[j + 1] == 'WindowStart' or eegEvents[j + 1] == 'finished':
+                counter = 0
+                dataDict = {}
 
-                    # print("Sample {:d}".format(counter))
-                    data = eegData[initialIdx:j + 1]
-                    data = data.transpose()
-                    # print(data.shape[1])
+                for j in range(initialIdx, len(eegEvents)):
+                    if eegWindows[j + 1] == 'WindowStart' or eegEvents[j + 1] == 'finished':
 
-                    if data.shape[1]>1240:
-                        #(0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),(12, 30, 'Beta'), (30, 50, 'Gamma')
-                        #Calculate bandpower
-                        bd = yasa.bandpower(data, sf=sf, ch_names=EEG_channels, win_sec=4,
-                                            bands=[(0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),
-                                                   (12, 30, 'Beta'), (30, 50, 'Gamma')])
-                        #Reshape coefficients into a single row vector
-                        bd = bd[Power_coefficients].values.reshape(1, -1)
+                        # print("Sample {:d}".format(counter))
+                        data = eegData[initialIdx:j + 1]
+                        data = data.transpose()
+                        # print(data.shape[1])
 
-                        #Create row name, label and add to data dict
-                        rowName = 'T' + str(trial) + '_' + str(counter)
-                        label = 1 if np.mean(eegLabel[initialIdx:j]) > 7.5 else 0
-                        bd = np.concatenate((bd,np.array([label]).reshape(1, -1) ), axis=1)
-                        dataDict[rowName] = np.squeeze(bd)
+                        if data.shape[1]>1200:
+                            #(0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),(12, 30, 'Beta'), (30, 50, 'Gamma')
+                            #Calculate bandpower
+                            bd = yasa.bandpower(data, sf=sf, ch_names=EEG_channels, win_sec=4,
+                                                bands=[(0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),
+                                                       (12, 30, 'Beta'), (30, 50, 'Gamma')])
+                            #Reshape coefficients into a single row vector
+                            bd = bd[Power_coefficients].values.reshape(1, -1)
 
-                    else:
-                        print("Sample {:d} not included".format(counter))
+                            #Create row name, label and add to data dict
+                            rowName = 'T' + str(trial) + '_' + str(counter)
+                            label = 1 if np.mean(eegLabel[initialIdx:j]) > 7.5 else 0
+                            bd = np.concatenate((bd,np.array([label]).reshape(1, -1) ), axis=1)
+                            dataDict[rowName] = np.squeeze(bd)
 
-                    initialIdx = j + 1
-                    counter += 1
+                        else:
+                            print("Sample {:d} not included".format(counter))
 
-                if eegEvents[j + 1] == 'finished':
-                    print("Number of samples {:d}".format(counter))
+                        initialIdx = j + 1
+                        counter += 1
 
-                    powerBandDataset = pd.DataFrame.from_dict(dataDict, orient='index', columns=newColumnNames)
-                    powerBandDataset.to_csv('./data/usersEEGLab/{:}/'.format(user)+ file[:-16]+'pow_eeglab.txt', sep=',')
-                    break
+                    if eegEvents[j + 1] == 'finished':
+                        print("Number of samples {:d}".format(counter))
+
+                        powerBandDataset = pd.DataFrame.from_dict(dataDict, orient='index', columns=newColumnNames)
+                        powerBandDataset.to_csv('./data/usersEEGLab/{:}/'.format(user)+ file[:-16]+'pow_eeglab.txt', sep=',')
+                        break

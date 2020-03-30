@@ -124,8 +124,8 @@ class EarlyStoppingCallback(keras.callbacks.Callback):
             self.validationAcc2.append(evaluation[1])
 
 def getNewModel(a,b):
-    return lstmClf.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
-    #return lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
+    #return lstmClf.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+    return lstmClf.lstm2(*(trainX.shape[1], trainX.shape[2]))
 
 allUsers = ['ryan','jhony','jackie','juan']
 if __name__ == '__main__':
