@@ -27,8 +27,8 @@ EEG_channels = [
                     "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
                     "PZ","P4","P8","PO3","PO4","OZ"]
 
-#Power_coefficients = ['Low', 'Delta','Theta','Alpha','Beta']
-Power_coefficients = ['Theta','Alpha','Beta']
+POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
+#POWER_COEFFICIENTS = ['Theta','Alpha','Beta']
 
 
 def series_to_supervised(data, labels, n_in=1, n_out=1, dropnan=True):
@@ -58,7 +58,7 @@ def series_to_supervised(data, labels, n_in=1, n_out=1, dropnan=True):
 
 def getData(train=True):
     # Create data column names
-    columnNames = [x + '-' + y for x, y in product(EEG_channels, Power_coefficients)]
+    columnNames = [x + '-' + y for x, y in product(EEG_channels, POWER_COEFFICIENTS)]
 
     #Set path
     if train:
@@ -93,7 +93,7 @@ def getData(train=True):
 
 def getDataSplitBySession(datapath, timesteps=12):
     # Create data column names
-    columnNames = [x + '-' + y for x, y in product(EEG_channels, Power_coefficients)]
+    columnNames = [x + '-' + y for x, y in product(EEG_channels, POWER_COEFFICIENTS)]
 
     #Get a list of all the files
     files = os.listdir(datapath)
@@ -128,9 +128,14 @@ def getDataSplitBySession(datapath, timesteps=12):
 
     return dataContainer
 
-def getDataSplitBySessionByTrial(datapath, timesteps=12):
+def getDataSplitBySessionByTrial(datapath, timesteps=12, powerCoefficients=None):
+    if powerCoefficients is None:
+        global POWER_COEFFICIENTS
+        pc = POWER_COEFFICIENTS
+    else:
+        pc = powerCoefficients
     # Create data column names
-    columnNames = [x + '-' + y for x, y in product(EEG_channels, Power_coefficients)]
+    columnNames = [x + '-' + y for x, y in product(EEG_channels, pc)]
 
     #Get a list of all the files
     files = os.listdir(datapath)
