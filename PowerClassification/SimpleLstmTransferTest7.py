@@ -1,18 +1,9 @@
 '''
-In the following script, I am going to test if the having multiple users in the training set will boost the classification results
-in the cross-session setting.
-
-Constraints of the experiment:
-1)Only data from one user will be in the testing set.
-2)The testing set will be a single session from the testing user.
-3)Another session of the testing user is added to the validation set.
-4)The rest of the sessions of the testing user go to the training set.
-
-Training and validation have data from multiple users.
-
-The experiment is going to be repeated for every session of the testing user.
-
-Conclusion:
+In the following script we will explore, which is the optimal windows size for the eeg
+classification. This script goes hand by hand with the DatasetGenerator.py, which generates
+different versions of the dataset with different windows sizes. This script will implement
+the same test as SimpleLstmTransferTest6.py to different datasets and then compare the results
+to see which is the best window size.
 '''
 
 
