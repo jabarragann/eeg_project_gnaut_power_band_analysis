@@ -6,24 +6,16 @@ attempt to solve this question.
 '''
 
 
+import sys
+sys.path.append(r'C:\Users\asus\PycharmProjects\eeg_project_gnaut_power_band_analysis')
 #Import libraries
+import PowerClassification.Utils.NetworkTraining as ut
 import numpy as np
 import pandas as pd
 import os
 from itertools import product
 import re
 import yasa
-
-#Global functions
-def makeDir(path):
-    try:
-        os.mkdir(path)
-    except Exception as e:
-        print(e)
-
-def getDirectories(path):
-    return [name for name in os.listdir(path) if os.path.isdir(os.path.join(path, name))]
-
 
 #Channels PO7 and PO8 are not included
 EEG_channels = [
@@ -39,7 +31,7 @@ print(newColumnNames)
 
 #Global variables
 users = ['juan','jackie','ryan','jhony']
-windowSize = [15,20]
+windowSize = [30]
 dataPath = './data/'
 rawDataPath = './data/raw_data'
 dstPath = dataPath + 'DifferentWindowSizeData/'
@@ -59,21 +51,22 @@ def calculatePowerBand(windowArray, df ):
 
         # print(counter, data2.shape[1])
 
-        # (0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),(12, 30, 'Beta'), (30, 50, 'Gamma')
-        # Calculate bandpower
-        bd = yasa.bandpower(data2, sf=sf, ch_names=EEG_channels, win_sec=4,
-                            bands=[(0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),
-                                   (12, 30, 'Beta'), (30, 50, 'Gamma')])
-        # Reshape coefficients into a single row vector
-        bd = bd[Power_coefficients].values.reshape(1, -1)
+        if data2.shape[1]>data2.shape[0]:
+            # (0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),(12, 30, 'Beta'), (30, 50, 'Gamma')
+            # Calculate bandpower
+            bd = yasa.bandpower(data2, sf=sf, ch_names=EEG_channels, win_sec=4,
+                                bands=[(0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),
+                                       (12, 30, 'Beta'), (30, 50, 'Gamma')])
+            # Reshape coefficients into a single row vector
+            bd = bd[Power_coefficients].values.reshape(1, -1)
 
-        # Create row name, label and add to data dict
-        rowName = 'T' + str(trial) + '_' + str(counter)
-        label = 1 if np.mean(data['label'].values) > 7.5 else 0
-        bd = np.concatenate((bd, np.array([label]).reshape(1, -1)), axis=1)
-        dataDict[rowName] = np.squeeze(bd)
-        #Update counter
-        counter+=1
+            # Create row name, label and add to data dict
+            rowName = 'T' + str(trial) + '_' + str(counter)
+            label = 1 if np.mean(data['label'].values) > 7.5 else 0
+            bd = np.concatenate((bd, np.array([label]).reshape(1, -1)), axis=1)
+            dataDict[rowName] = np.squeeze(bd)
+            #Update counter
+            counter+=1
 
     powerBandDataset = pd.DataFrame.from_dict(dataDict, orient='index', columns=newColumnNames)
 
@@ -81,17 +74,19 @@ def calculatePowerBand(windowArray, df ):
 
 if __name__ == '__main__':
 
+    utilities = ut.Utils()
+
     #Create Directory where all the data is going to be stored
-    makeDir(dstPath)
+    utilities.makeDir(dstPath)
 
     for w1 in windowSize:
 
-        makeDir(dstPath+'{:02d}s'.format(w1))
+        utilities.makeDir(dstPath+'{:02d}s'.format(w1))
 
         #Check all the raw files and create a file with the specified data file
-        rawDirs = getDirectories(rawDataPath)
+        rawDirs = utilities.getDirectories(rawDataPath)
         for u1 in rawDirs:
-            makeDir(dstPath + '{:02d}s/{:}'.format(w1,u1))
+            utilities.makeDir(dstPath + '{:02d}s/{:}'.format(w1,u1))
             p2 =  os.path.join(rawDataPath, u1)
 
             dataFiles = os.listdir(p2)
@@ -124,7 +119,7 @@ if __name__ == '__main__':
                     result = df.loc[df['COMPUTER_TIME'] > (startTime+w1)]
 
                     #Check if end was reached
-                    if result.shape[0] == 0:
+                    if result.shape[0] <= 1:
                         endIdx = df.index.values[-1]
                         endTime = df['COMPUTER_TIME'].values[-1]
                         t = [windowCounter, startIdx, endIdx, endTime-startTime]
