@@ -2,7 +2,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-df = pd.read_csv('data.csv', sep=',')
+df = pd.read_csv('timesteps_data.csv', sep=',')
 
 df1 = df.loc[df['user'] == 'jackie']
 df2 = df.loc[df['user'] == 'juan']
