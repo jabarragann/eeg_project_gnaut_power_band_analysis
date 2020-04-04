@@ -11,6 +11,8 @@ from tensorflow import keras
 from tensorflow.keras.layers import Dense, Input, BatchNormalization, Dropout, Softmax,LSTM, Bidirectional
 from tensorflow.keras.models import Model
 from tensorflow.keras import regularizers
+from twilio.rest import Client
+import os
 
 class Utils:
     @staticmethod
@@ -22,6 +24,26 @@ class Utils:
     @staticmethod
     def getDirectories(path):
         return [name for name in os.listdir(path) if os.path.isdir(os.path.join(path, name))]
+
+    @staticmethod
+    def sendSMS(body, debug=False):
+        try:
+            account_sid = os.environ['TWILIO_ACCOUNT_SID']
+            auth_token = os.environ['TWILIO_AUTH_TOKEN']
+
+            client = Client(account_sid, auth_token)
+
+            message = client.messages \
+                .create(
+                body=body,
+                messaging_service_sid=os.environ['TWILIO_MESSAGING'],
+                to='+13176031817'
+            )
+            if debug:
+                print(message.sid)
+        except Exception as e:
+            print("Messaging service failed")
+            print(e)
 
 class DataLoaderModule:
     '''
