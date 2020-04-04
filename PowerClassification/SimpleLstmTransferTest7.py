@@ -41,7 +41,7 @@ if __name__ == '__main__':
     resultsPath = './results/results_transfer7/'
     dataPath = './data/DifferentWindowSizeData/'
     windowSize = [5, 10, 15, 20, 30]
-    lstmTimesteps = [12, 6, 4, 3, 2]
+    lstmTimesteps = [18, 9, 6, 4, 3]
 
     #Create Network training module
     utilsModule = netTrain.Utils()
