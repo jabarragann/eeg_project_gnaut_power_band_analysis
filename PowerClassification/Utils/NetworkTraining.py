@@ -13,6 +13,11 @@ from tensorflow.keras.models import Model
 from tensorflow.keras import regularizers
 from twilio.rest import Client
 import os
+from tensorflow.keras.utils import to_categorical
+import random
+from tensorflow.keras import backend as K
+from pathlib import Path
+import traceback
 
 class Utils:
     @staticmethod
@@ -104,8 +109,8 @@ class DataLoaderModule:
                 sessId = re.findall("S[0-9]_T[0-9]", f)[0][-4]
 
                 # Get data frame
-                print(datapath + f)
-                d1 = pd.read_csv(datapath + f, sep=',', index_col=0)
+                print(datapath / f)
+                d1 = pd.read_csv(datapath / f, sep=',', index_col=0)
                 # Get data and labels
                 X, y = d1[columnNames], d1['Label']
                 # Get Number of features
@@ -177,7 +182,7 @@ class NetworkFactoryModule:
         model1 = Model(inputs=networkInput, outputs=networkOutput)
         model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
 
-        return model1
+        return model1, 'simpleModel'
 
     @staticmethod
     def createAdvanceLstmModel(timesteps, features, isBidirectional=True, inputLayerNeurons=64, inputLayerDropout=0.3,
@@ -209,7 +214,8 @@ class NetworkFactoryModule:
         model1 = Model(inputs=networkInput, outputs=networkOutput)
         model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
 
-        return model1
+        return model1, 'advanceModel'
+
 class NetworkTrainingModule:
 
     '''
@@ -218,14 +224,14 @@ class NetworkTrainingModule:
 
     def trainModelEarlyStop(self, model, X_train, y_train,
                             X_val, y_val, X_test, y_test,
-                            batchSize=256*2, epochs=300, debug=True):
-        '''
+                            batchSize=256*2, epochs=300, debug=True, verbose=1):
+        """
             The following function trains a model with the given train data and validation data.
             At the same time it checks the performance of the model in the testing set through the
             EarlyStoppingCallback class. After training, the model is returned to the step in time
             where the best validation accuracy is obtained.
 
-            :param model:
+            :param model: Keras LSTM model to test
             :param X_train:
             :param y_train:
             :param X_val:
@@ -235,9 +241,10 @@ class NetworkTrainingModule:
             :param batchSize: 512
             :param epochs: 300
             :param debug: True
+            :param verbose:
 
             :return: kerasHistory, model, earlyStoppingInstance
-        '''
+        """
 
         # Normalize data
         # X_mean = np.mean(X_train, axis=(0,1))
@@ -256,7 +263,7 @@ class NetworkTrainingModule:
         #Train model
         callbacks = [earlyStopCallback]
         history = model.fit(X_train, y_train, epochs=epochs, batch_size=batchSize,
-                            validation_data=(X_val, y_val), callbacks=callbacks)
+                            validation_data=(X_val, y_val), callbacks=callbacks, verbose=verbose)
 
         #Get best weights
         model.set_weights(earlyStopCallback.bestWeights)
@@ -345,3 +352,103 @@ class NetworkTrainingModule:
                 evaluation = self.model.evaluate(self.val2X, self.val2Y, verbose=0)
                 self.validationLoss2.append(evaluation[0])
                 self.validationAcc2.append(evaluation[1])
+
+class CrossValidationRoutines:
+
+    @staticmethod
+    def userCrossValidation(lstmSteps, userDataPath, plotPath, user):
+        """
+        userCrossValidation will train a model on different fold of a single user. The method uses the following
+        logic for the cross-validation.
+
+        Step 1) Select a test session.
+        Step 2) Randomly choose a validation session from the remaining sessions.
+        Step 3) All the remaining session are the training set.
+        Step 4) Repeat 1-3 for every session.
+
+        :param lstmSteps:
+        :param userDataPath:
+        :param plotPath:
+        :param user:
+        :return:
+        """
+
+        dataLoaderModule  = DataLoaderModule()
+        trainingModule = NetworkTrainingModule()
+        factoryModule = NetworkFactoryModule()
+        resultsContainer = []
+
+        dataContainer = dataLoaderModule.getDataSplitBySession(userDataPath, timesteps=lstmSteps)
+
+        try:
+            # Iterate over all the available sessions creating different testing sets.
+            for testingKey in dataContainer.keys():
+                    print("Testing on session {:}".format(testingKey) )
+                    testX = dataContainer[testingKey]['X']
+                    testY = dataContainer[testingKey]['y']
+
+                    # Select randomly one session for validation
+                    availableSessions = list(dataContainer.keys())
+                    availableSessions.remove(testingKey)
+                    validationSession = random.choice(availableSessions)
+                    availableSessions.remove(validationSession)
+
+                    #Load validation data
+                    valX = dataContainer[validationSession]['X']
+                    valY = dataContainer[validationSession]['y']
+
+                    # Use the rest of the sessions for the first round of training.
+                    trainX, trainY = [], []
+                    for trainingKey in availableSessions:
+                        trainX.append(dataContainer[trainingKey]['X'])
+                        trainY.append(dataContainer[trainingKey]['y'])
+
+                    trainX = np.concatenate(trainX)
+                    trainY = np.concatenate(trainY)
+
+
+                    # Convert labels to one-hot encoding
+                    trainY = to_categorical(trainY)
+                    valY = to_categorical(valY)
+                    testY = to_categorical(testY)
+
+                    # Normalize data
+                    X_mean = np.mean(trainX, axis=(0, 1))
+                    X_std = np.std(trainX, axis=(0, 1))
+
+                    trainX = (trainX - X_mean) / (X_std + 1e-18)
+                    valX = (valX - X_mean) / (X_std + 1e-18)
+                    testX = (testX - X_mean) / (X_std + 1e-18)
+
+                    # Train Model
+                    model, modelName = factoryModule.createAdvanceLstmModel(lstmSteps, trainX.shape[2])
+                    history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY,
+                                                                                       valX, valY, testX, testY, epochs=400,verbose=0)
+
+                    #Create Plot
+                    plotTitle = '{:}_test{:}_validation{:}'.format(user,testingKey, validationSession)
+                    completePlotPath = plotPath / plotTitle
+                    trainingModule.createPlot(history,plotTitle, completePlotPath,earlyStopCallBack=earlyStopping)
+                    evalTrain = model.evaluate(trainX, trainY)[1]
+                    evalValidation = model.evaluate(valX,valY)[1]
+                    evalTest = model.evaluate(testX, testY)[1]
+                    K.clear_session()
+
+
+                    data = {testingKey: [user, modelName,testingKey,validationSession, evalTrain,evalValidation,evalTest, ]}
+
+                    df1 = pd.DataFrame.from_dict(data, orient='index',
+                                                 columns=[ 'User', 'ModelName','TestSession', 'ValidationSession', 'TrainAcc',
+                                                           'ValidationAcc', 'TestAcc',])
+
+                    resultsContainer.append(df1)
+        except Exception as e:
+            print("ERROR!!!!!!!!!!!!!!!!!!!")
+            print(e)
+            traceback.print_exc()
+
+        finally:
+            return pd.concat(resultsContainer)
+
+
+
