@@ -18,6 +18,7 @@ import random
 from tensorflow.keras import backend as K
 from pathlib import Path
 import traceback
+import copy
 
 class Utils:
     @staticmethod
@@ -224,7 +225,7 @@ class NetworkTrainingModule:
 
     def trainModelEarlyStop(self, model, X_train, y_train,
                             X_val, y_val, X_test, y_test,
-                            batchSize=256*2, epochs=300, debug=True, verbose=1):
+                            batchSize=128, epochs=300, debug=True, verbose=1):
         """
             The following function trains a model with the given train data and validation data.
             At the same time it checks the performance of the model in the testing set through the
@@ -245,10 +246,17 @@ class NetworkTrainingModule:
 
             :return: kerasHistory, model, earlyStoppingInstance
         """
-
         # Normalize data
         # X_mean = np.mean(X_train, axis=(0,1))
         # X_std = np.std(X_train, axis = (0,1))
+
+        # # Change data to float32
+        X_train = X_train.astype(np.float32)
+        y_train = y_train.astype(np.float32)
+        X_test = X_test.astype(np.float32)
+        y_test = y_test.astype(np.float32)
+        X_val = X_val.astype(np.float32)
+        y_val = y_val.astype(np.float32)
 
         # Print data shape
         if debug:
@@ -256,11 +264,10 @@ class NetworkTrainingModule:
             print("Test Shape", X_test.shape)
 
         # Training parameters
-        batchSize = batchSize
-        epochs = epochs
         earlyStopCallback = self.EarlyStoppingCallback(2, additionalValSet=(X_test, y_test))
 
         #Train model
+        K.clear_session()
         callbacks = [earlyStopCallback]
         history = model.fit(X_train, y_train, epochs=epochs, batch_size=batchSize,
                             validation_data=(X_val, y_val), callbacks=callbacks, verbose=verbose)
@@ -306,6 +313,8 @@ class NetworkTrainingModule:
     # Auxiliary classes
     class EarlyStoppingCallback(keras.callbacks.Callback):
         def __init__(self, modelNumber, additionalValSet=None):
+            self.patience = 100
+            self.stoppingCounter = 0
             self.maxValidationAcc = 0.0
             self.epochOfMaxValidation = -1
             self.epoch = 0
@@ -334,6 +343,7 @@ class NetworkTrainingModule:
 
         def on_epoch_end(self, batch, logs):
             self.epoch += 1
+            self.stoppingCounter += 1
 
             # Save Training Information
             self.trainingLosses.append(logs.get('loss'))
@@ -346,12 +356,17 @@ class NetworkTrainingModule:
                 self.epochOfMaxValidation = self.epoch
                 self.bestWeights = self.model.get_weights()
                 self.maxValidationAcc = logs.get('val_acc')
+                self.stoppingCounter = 0
 
             # Test on additional set if there is one
             if self.testingOnAdditionalSet:
                 evaluation = self.model.evaluate(self.val2X, self.val2Y, verbose=0)
                 self.validationLoss2.append(evaluation[0])
                 self.validationAcc2.append(evaluation[1])
+
+            #Stop training if there hasn't been any improvement in 'Patience' epochs
+            if self.stoppingCounter >= self.patience:
+                self.model.stop_training = True
 
 class CrossValidationRoutines:
 
@@ -450,5 +465,147 @@ class CrossValidationRoutines:
         finally:
             return pd.concat(resultsContainer)
 
+    @staticmethod
+    def userCrossValidationMultiUser(lstmSteps, dataPath, plotPath, testUser, listOfUsers):
+        """
+         userCrossValidationMultiUser will perform the crossvalidation process of a model. The main difference
+        between userCrossValidation is that training data from multiple user will be added to the training and
+        validation sets with the following procedure.
+
+        1)Only data from one user will be in the testing set.
+        2)The testing set will be a single session from the testing user.
+        3)Another session of the testing user is added to the validation set.
+        4)The rest of the sessions of the testing user go to the training set.
+
+        Training and validation have data from multiple users.
+        :param lstmSteps:
+        :param dataPath:
+        :param plotPath:
+        :param testUser:
+        :param listOfUsers:
+        :return:
+        """
+
+        dataLoaderModule = DataLoaderModule()
+        trainingModule = NetworkTrainingModule()
+        factoryModule = NetworkFactoryModule()
+        resultsContainer = []
+
+        testUserContainer = dataLoaderModule.getDataSplitBySession(dataPath / testUser, timesteps=lstmSteps)
+
+        # Initially remove testing user from training and create train set without him
+        trainingUsers = copy.copy(listOfUsers)
+        trainingUsers.remove(testUser)
+
+        firstTrainX = []
+        firstTrainY = []
+        firstValX = []
+        firstValY = []
+        logger = [[], [], []]
+        for u in trainingUsers:
+            # Open user data
+            trainDataContainer = dataLoaderModule.getDataSplitBySession(dataPath / u, timesteps=lstmSteps )
+
+            # Choose randomly 4 sessions for testing and 1 for validation
+            availableSessions = np.array(list(trainDataContainer.keys()))
+            idx = np.arange(len(availableSessions))
+            idx = np.random.choice(idx, 4, replace=False)
+            trSess = availableSessions[idx[:-1]]
+            vlSess = availableSessions[idx[-1]]
+
+            # create sets
+            firstTrainX.append(np.concatenate([trainDataContainer[i]['X'] for i in trSess]))
+            firstTrainY.append(np.concatenate([trainDataContainer[i]['y'] for i in trSess]))
+            firstValX.append(np.concatenate([trainDataContainer[i]['X'] for i in vlSess]))
+            firstValY.append(np.concatenate([trainDataContainer[i]['y'] for i in vlSess]))
+
+            logger[0].append(u), logger[1].append(trSess), logger[2].append(vlSess)
+
+        try:
+            # Iterate over all the sessions of the testing user
+            # Use one session for the test set and one for validation and the rest for training
+
+            # Transform default dict to dict to avoid modifications of the container
+            testUserContainer = dict(testUserContainer)
+
+            for testingKey in testUserContainer.keys():
+
+                # copy data from the other users
+                trainX = copy.copy(firstTrainX)
+                trainY = copy.copy(firstTrainY)
+                valX = copy.copy(firstValX)
+                valY = copy.copy(firstValY)
+
+                # Select randomly one session for validation and use the rest for training
+                availableSessions = list(testUserContainer.keys())
+                availableSessions.remove(testingKey)
+                validationSession = random.choice(availableSessions)
+                availableSessions.remove(validationSession)
 
 
+                # Add randomly sampled session to the validation set
+                valX.append(testUserContainer[validationSession]['X'])
+                valY.append(testUserContainer[validationSession]['y'])
+
+                # Add the remaining sessions to the training set
+                for j in availableSessions:
+                    trainX.append(testUserContainer[j]['X'])
+                    trainY.append(testUserContainer[j]['y'])
+
+                # Concatenate all sessions for validation and training
+                trainX = np.concatenate(trainX)
+                trainY = np.concatenate(trainY)
+                valX = np.concatenate(valX)
+                valY = np.concatenate(valY)
+
+                testX = testUserContainer[testingKey]['X']
+                testY = testUserContainer[testingKey]['y']
+
+                # Convert labels to one-hot encoding
+                trainY = to_categorical(trainY)
+                testY = to_categorical(testY)
+                valY = to_categorical(valY)
+
+                # Normalize data - with training set parameters
+                globalMean = trainX.mean(axis=(0, 1))
+                globalStd = trainX.std(axis=(0, 1))
+
+                trainX = (trainX - globalMean) / (globalStd + 1e-18)
+                valX = (valX - globalMean) / (globalStd + 1e-18)
+                testX = (testX - globalMean) / (globalStd + 1e-18)
+
+                # Train Model - First round
+                model,modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY, testX, testY,
+                                                                                   epochs=700, verbose=0)
+
+                evalTrain = model.evaluate(trainX, trainY,verbose=0)[1]
+                evalValidation = model.evaluate(valX, valY, verbose=0)[1]
+                evalTest = model.evaluate(testX, testY,verbose=1)[1]
+                K.clear_session()
+
+
+                # Plot results
+                plotTitle = '{:}_test{:}_validation{:}'.format(testUser, testingKey, validationSession)
+                completePlotPath = plotPath / plotTitle
+                trainingModule.createPlot(history,plotTitle,completePlotPath,earlyStopCallBack=earlyStopping)
+
+
+                # Save all the results
+                data = {testingKey: [testUser, modelName,
+                                     testingKey, validationSession,
+                                     evalTrain, evalValidation, evalTest, ]}
+
+                df1 = pd.DataFrame.from_dict(data, orient='index',
+                                             columns=['User', 'ModelName', 'TestSession', 'ValidationSession', 'TrainAcc',
+                                                      'ValidationAcc', 'TestAcc', ])
+
+                resultsContainer.append(df1)
+
+        except Exception as e:
+            print("ERROR!!!!!!!!!!!!!!!!!!!")
+            print(e)
+            traceback.print_exc()
+
+        finally:
+            return pd.concat(resultsContainer)
