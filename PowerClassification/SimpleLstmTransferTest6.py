@@ -5,6 +5,8 @@ different versions of the dataset with different windows sizes. This script will
 the same test as SimpleLstmTransferTest3.py to different datasets and then compare the results
 to see which is the best window size.
 
+Use data from single user
+
 '''
 
 import SimpleLstmClassification as lstmClf

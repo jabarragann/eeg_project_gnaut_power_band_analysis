@@ -2,8 +2,10 @@
 In the following script we will explore, which is the optimal windows size for the eeg
 classification. This script goes hand by hand with the DatasetGenerator.py, which generates
 different versions of the dataset with different windows sizes. This script will implement
-the same test as SimpleLstmTransferTest6.py to different datasets and then compare the results
+the same test as SimpleLstmTransferTest4.py to different datasets and then compare the results
 to see which is the best window size.
+
+Use data from multiple user for the training process
 '''
 
 

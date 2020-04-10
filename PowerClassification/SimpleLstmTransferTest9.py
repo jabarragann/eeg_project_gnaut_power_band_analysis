@@ -1,7 +1,7 @@
 '''
 Grid search for the best lstm sample size and windows size.
 
-single user
+multi user
 '''
 
 from PowerClassification.Utils.NetworkTraining import CrossValidationRoutines
@@ -24,14 +24,14 @@ if __name__ == '__main__':
         completeResults = []
 
         for user in ['ryan','juan', 'jackie','jhony']:
-            userDataPath = Path('./data/DifferentWindowSizeData/{:02d}s/{:}/'.format(windowSize, user))
-            resultsPath = Path('./results/toErase') / 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
+            dataPath = Path('./data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
+            resultsPath = Path('./results/results_transfer9') / 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():
                 print('create ', resultsPath)
                 Path.mkdir(resultsPath,parents=True)
 
-            results = crossValidationModule.userCrossValidation(lstmSteps, userDataPath,resultsPath, user)
+            results = crossValidationModule.userCrossValidationMultiUser(lstmSteps, dataPath,resultsPath, user,USERS)
             results.to_csv(resultsPath / '{:}_results.csv'.format(user), index= False)
             completeResults.append(results)
 
