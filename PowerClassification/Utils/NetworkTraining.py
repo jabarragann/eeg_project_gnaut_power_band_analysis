@@ -1,7 +1,4 @@
-import os
 import matplotlib.pyplot as plt
-import tensorflow.keras as keras
-import pandas as pd
 import numpy as np
 from collections import defaultdict
 from itertools import product
@@ -55,14 +52,12 @@ class DataLoaderModule:
     '''
         Utility to train data.
     '''
-
     # Channels PO7 and PO8 are not included
     EEG_CHANNELS = [
         "FP1", "FP2", "AF3", "AF4", "F7", "F3", "FZ", "F4",
         "F8", "FC5", "FC1", "FC2", "FC6", "T7", "C3", "CZ",
         "C4", "T8", "CP5", "CP1", "CP2", "CP6", "P7", "P3",
         "PZ", "P4", "P8", "PO3", "PO4", "OZ"]
-
     POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
 
     def series_to_supervised(self, data, labels, n_in=1, n_out=1, dropnan=True):

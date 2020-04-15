@@ -4,8 +4,12 @@ import pandas as pd
 
 
 #Import shimmer data
-df = pd.read_csv('./data/juan_S7_T4_shimmer.txt')
-data, timer = df['PPG'].values[:-1], df['ComputerTime'].values
+# df = pd.read_csv('./data/jackie_S1_T1_shimmer.txt')
+df = pd.read_csv('./data/juan_S2_T3_shimmer.txt')
+# df = pd.read_csv('./data/ryan_S5_T1_shimmer.txt')
+# df = pd.read_csv('./data/jhony_S4_T5_shimmer.txt')
+
+data, timer = df['PPG'].values[:-50], df['ComputerTime'].values
 fs = 204.8
 
 #and visualise
@@ -22,18 +26,9 @@ plt.figure(figsize=(12,4))
 plt.plot(filtered)
 plt.show()
 
-# enhanced = hp.enhance_peaks(filtered, iterations=1)
-#
-# #and visualise
-# plt.figure(figsize=(12,4))
-# plt.plot(enhanced)
-# plt.show()
-# filtered = hp.filter_signal(data, cutoff=2, sample_rate=fs, order=3, filtertype='highpass')
-# filtered = hp.filter_signal(data, cutoff = 4, sample_rate =fs, order = 5, filtertype='lowpass')
-# scaled = hp.scale_data(filtered, lower=0, upper=1024)
 
 #run the analysis
-wd, m = hp.process(filtered, sample_rate = fs)
+wd, m = hp.process(filtered, sample_rate = fs, calc_freq=True)
 
 # wd, m = hp.process(filtered, sample_rate = fs)
 
