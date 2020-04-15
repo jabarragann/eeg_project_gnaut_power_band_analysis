@@ -21,10 +21,19 @@ def detectNan (m):
             return True
     return False
 
+def replaceNan(m, mPrev):
+    for k,val in m.items():
+        if  np.isnan(val):
+            m[k] = mPrev[k].item()
+        #Remove numpy masked constants not exactly sure if I am solving correctly this issue
+        #Read about masked constants
+        elif str(val) == '--':
+            m[k] = mPrev[k].item()
+    return m
+
 def calculateShimmerFeatures(windowArray,df, sampleFreq,fileName):
     counter = 0
     dataCont = []
-
 
     for i in range(windowArray.shape[0]):
         v1 = windowArray[i]
@@ -61,6 +70,32 @@ def calculateShimmerFeatures(windowArray,df, sampleFreq,fileName):
     result = result.append(dataCont,True)
     return result
 
+def calculateShimmerFeaturesV2(data, sampleFreq, fileName):
+    ppgSignal = data['PPG'].values
+    label = int(data['label'].values.mean())
+
+    filtered = hp.filter_signal(ppgSignal, [0.7, 3.5], sample_rate=sampleFreq, order=3, filtertype='bandpass')
+
+    # windowSize = 3.0 #30Seconds samples
+    windowSize = 1.4 #60seconds samples
+    try:
+        wd, m = hp.process(filtered, sample_rate=sampleFreq ,
+                           windowsize=windowSize,
+                            high_precision=True)
+    except Exception as e:
+        print(e)
+        wd, m = hp.process(filtered, sample_rate=sampleFreq,  windowsize=windowSize)
+
+    m['label'] = 0.0 if label == 5 else 1.0
+
+    global nanCounter
+    if detectNan(m):
+        nanCounter += 1
+        # hp.plotter(wd, m)
+        print(nanCounter)
+
+    return m #Metrics from window
+
 def main():
     dataPath = Path('./../data/')
     rawDataPath = dataPath / 'shimmer_raw_data'
@@ -80,7 +115,8 @@ def main():
         # Check all the raw files and create a file with the specified data file
         for f2 in rawDataPath.rglob(('*.txt')):
             dstPathFinal = dstPath / '{:02d}s/{:}'.format(w1, f2.parent.name)
-            u1 = f2.parent.name
+            user = f2.parent.name
+            finalDataContainer = []
 
             # if u1 == 'juan':
             #     continue
@@ -101,40 +137,51 @@ def main():
                             (df['5secondWindow'] == 'WindowStart')]
             startIdx = result.index.values[0]
             startTime = result['ComputerTime'].values[0]
+            df['Time'] = df['ComputerTime'] - startTime
 
             windowCounter = 0
             windowArray = []
+            remainingData = copy.deepcopy(df)
             while True:
-                result = df.loc[df['ComputerTime'] > (startTime + w1)]  # Get end Idx
-                if result.shape[0] <= 1: # Check if end was reached
-                    endIdx = df.index.values[-1]
-                    endTime = df['ComputerTime'].values[-1]
-                    t = [windowCounter, startIdx, endIdx, endTime - startTime]
-                    windowArray.append(t)
-                    break
+                # Get window
+                window = remainingData.loc[(remainingData['ComputerTime'] > startTime) \
+                                            & (remainingData['ComputerTime'] < (startTime + w1))]
 
-                endIdx = result.index.values[0]
-                endTime = result['ComputerTime'].values[0]
-                t = [windowCounter, startIdx, endIdx, endTime - startTime]
-                windowArray.append(t)
+                if window['ComputerTime'].values[-1]- window['ComputerTime'].values[0] <= w1*0.9: # Check if end was reached
+                    print('remainder',window.shape[0])
+                    break
+                else:
+                    beginTime = window['ComputerTime'].values[0]
+                    endTime = window['ComputerTime'].values[-1]
+                    generalInfo = {'User': user, 'Session': session, 'Trial': trial,
+                                   'BeginTime':beginTime,'EndTime':endTime, 'length': (endTime-beginTime),
+                                   'WindowNumber':windowCounter}
+                    features = calculateShimmerFeaturesV2(window,sampleFreq=204.8,fileName=f2.name)
+
+                    #If a nan is detected replaced the nan values with the values in the previous window
+                    if detectNan(features):
+                        #This will fail if the first window is the one who contains the nan values.
+                        #You need to think in a better solution.
+                        features = replaceNan(features, finalDataContainer[-1])
+
+                    dataDict = dict(generalInfo,**features)
+                    finalDataContainer.append(pd.DataFrame(data=[list(dataDict.values())],columns=dataDict.keys()))
 
                 # Update values
                 windowCounter += 1
-                startIdx = endIdx + 1
-                result = df.loc[df['ComputerTime'] > (startTime + w1 - overlap)]
-                startTime = result['ComputerTime'].values[0]
+                startTime = (startTime + w1 -overlap)
+                remainingData = remainingData.loc[remainingData['ComputerTime'] > startTime]
 
-            windowArray = np.array(windowArray)
 
-            shimmerFeatures = calculateShimmerFeatures(windowArray,df,204.8, fileName=f2.name)
-
-            pf = dstPathFinal / '{:}_S{:d}_T{:}_time.txt'.format(u1,session,trial)
-            shimmerFeatures.to_csv(pf, sep=',', index=False)
+            finalDataContainer = pd.concat(finalDataContainer, ignore_index=True)
+            pf = dstPathFinal / '{:}_S{:d}_T{:}_Shimmer.txt'.format(user,session,trial)
+            finalDataContainer.to_csv(pf, sep=',', index=False)
 
             print(pf)
 
-        utilities.sendSMS('The dataset creation finished')
         print("Number of nan", nanCounter)
+        print("Nan elements where replaced with values of the previous window")
+        print("This is the best solution I have found so far; however, can fail easily if the first window has the Nan values")
 
 if __name__ == '__main__':
     main()

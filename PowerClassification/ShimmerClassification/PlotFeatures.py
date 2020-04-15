@@ -16,16 +16,20 @@ if __name__== '__main__':
 
     dataContainer = []
     for file in DATA_DIR.rglob('*.txt'):
-        df = pd.read_csv(file,sep=',')
-        df['user'] = file.parent.name
+        df = pd.read_csv(file,sep=',',)
+
         dataContainer.append(copy.deepcopy(df))
 
-    dataContainer = pd.concat(dataContainer)
+    dataContainer = pd.concat(dataContainer, ignore_index=True)
+    # dataContainer = dataContainer.loc[ dataContainer['User']=='jackie']
+    # dataContainer = dataContainer.dropna(axis=0)
+    # dataContainer['sdsd'] = pd.to_numeric(dataContainer['sdsd'])
+
     counter=0
     f, ax = plt.subplots(6,2,figsize=(10, 6),sharex='col')
     for r in range(6):
         for c in range(2):
-            g = sns.boxplot(x='user', y=metrics[counter],
+            g = sns.boxplot(x='User', y=metrics[counter],
                             hue="label", data=dataContainer,
                             palette="Set1", ax=ax[r,c])
             g.legend().remove()
