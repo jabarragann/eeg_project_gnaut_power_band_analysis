@@ -84,13 +84,24 @@ class DataLoaderModule:
         labels = labels[n_in:]
         return agg.values, labels.values
 
-    def getDataSplitBySession(self, datapath, timesteps=None, powerBands = None):
+    def getDataSplitBySession(self, datapath, timesteps=None, powerBands = None, eegChannels = None):
+        """
+        Get a dictionary of all the different data sessions found in the datapath. A session is defined as all the data
+        that was collected before the person takes of the sensor.
 
+        :param datapath:
+        :param timesteps:
+        :param powerBands:
+        :param eegChannels:
+        :return:
+        """
         if powerBands is None:
             powerBands = self.POWER_COEFFICIENTS
+        if eegChannels is None:
+            eegChannels = self.EEG_CHANNELS
 
         # Create data column names
-        columnNames = [x + '-' + y for x, y in product(self.EEG_CHANNELS, powerBands)]
+        columnNames = [x + '-' + y for x, y in product(eegChannels, powerBands)]
 
         # Get a list of all the files
         files = os.listdir(datapath)
@@ -461,7 +472,7 @@ class CrossValidationRoutines:
             return pd.concat(resultsContainer)
 
     @staticmethod
-    def userCrossValidationMultiUser(lstmSteps, dataPath, plotPath, testUser, listOfUsers):
+    def userCrossValidationMultiUser(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None):
         """
          userCrossValidationMultiUser will perform the crossvalidation process of a model. The main difference
         between userCrossValidation is that training data from multiple user will be added to the training and
@@ -473,6 +484,8 @@ class CrossValidationRoutines:
         4)The rest of the sessions of the testing user go to the training set.
 
         Training and validation have data from multiple users.
+        :param eegChannels: This parameter could be either None to use all the available EEG channels
+         or a list of the channels that should be included in the data.
         :param lstmSteps:
         :param dataPath:
         :param plotPath:
@@ -486,7 +499,7 @@ class CrossValidationRoutines:
         factoryModule = NetworkFactoryModule()
         resultsContainer = []
 
-        testUserContainer = dataLoaderModule.getDataSplitBySession(dataPath / testUser, timesteps=lstmSteps)
+        testUserContainer = dataLoaderModule.getDataSplitBySession(dataPath / testUser, timesteps=lstmSteps,eegChannels=eegChannels)
 
         # Initially remove testing user from training and create train set without him
         trainingUsers = copy.copy(listOfUsers)
@@ -499,7 +512,7 @@ class CrossValidationRoutines:
         logger = [[], [], []]
         for u in trainingUsers:
             # Open user data
-            trainDataContainer = dataLoaderModule.getDataSplitBySession(dataPath / u, timesteps=lstmSteps )
+            trainDataContainer = dataLoaderModule.getDataSplitBySession(dataPath / u, timesteps=lstmSteps, eegChannels= eegChannels )
 
             # Choose randomly 4 sessions for testing and 1 for validation
             availableSessions = np.array(list(trainDataContainer.keys()))

@@ -12,8 +12,9 @@ import itertools
 
 if __name__ == '__main__':
     USERS = ['ryan','juan', 'jackie','jhony']
-    LSTM_SAMPLE_SIZE = [30,45,60,75,90]
-    WINDOW_SIZE = [5,10,15,20,25,30]
+    EEG_CHANNELS = ['FZ', 'F7', 'F3', 'F4', 'F8']
+    LSTM_SAMPLE_SIZE = [60,75,90,105,120]
+    WINDOW_SIZE = [10,15,20,25,30,40]
 
     crossValidationModule = CrossValidationRoutines()
     utilsModule = Utils()
@@ -25,13 +26,13 @@ if __name__ == '__main__':
 
         for user in ['ryan','juan', 'jackie','jhony']:
             dataPath = Path('./data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
-            resultsPath = Path('./results/results_transfer9') / 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
+            resultsPath = Path('./results/results_transfer9') / 'fChannelsExp'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():
                 print('create ', resultsPath)
                 Path.mkdir(resultsPath,parents=True)
 
-            results = crossValidationModule.userCrossValidationMultiUser(lstmSteps, dataPath,resultsPath, user,USERS)
+            results = crossValidationModule.userCrossValidationMultiUser(lstmSteps, dataPath,resultsPath, user,USERS,eegChannels=EEG_CHANNELS)
             results.to_csv(resultsPath / '{:}_results.csv'.format(user), index= False)
             completeResults.append(results)
 
