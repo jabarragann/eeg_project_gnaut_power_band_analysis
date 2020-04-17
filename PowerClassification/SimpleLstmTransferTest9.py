@@ -25,8 +25,8 @@ if __name__ == '__main__':
         completeResults = []
 
         for user in ['ryan','juan', 'jackie','jhony']:
-            dataPath = Path('./data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
-            resultsPath = Path('./results/results_transfer9') / 'fChannelsExp-NoICA'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
+            dataPath = Path('./data/DifferentWindowSizeDataICA/{:02d}s/'.format(windowSize))
+            resultsPath = Path('./results/results_transfer9') / 'fChannelsExp-WithICA'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():
                 print('create ', resultsPath)

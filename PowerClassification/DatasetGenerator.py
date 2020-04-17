@@ -32,10 +32,10 @@ print(newColumnNames)
 
 #Global variables
 users = ['juan','jackie','ryan','jhony']
-windowSize = [25,40,50]
+windowSize = [10,15,20,25,30,40]
 dataPath = Path('./data/')
-rawDataPath = Path('./data/raw_data')
-dstPath = dataPath / 'DifferentWindowSizeData'
+rawDataPath = Path('./data/raw_data_eeglab_formatted')
+dstPath = dataPath / 'DifferentWindowSizeDataICA'
 sf = 250
 
 
