@@ -32,7 +32,7 @@ print(newColumnNames)
 
 #Global variables
 users = ['juan','jackie','ryan','jhony']
-windowSize = [25]
+windowSize = [25,40,50]
 dataPath = Path('./data/')
 rawDataPath = Path('./data/raw_data')
 dstPath = dataPath / 'DifferentWindowSizeData'
