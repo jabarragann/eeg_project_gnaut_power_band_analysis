@@ -514,12 +514,11 @@ class CrossValidationRoutines:
             # Open user data
             trainDataContainer = dataLoaderModule.getDataSplitBySession(dataPath / u, timesteps=lstmSteps, eegChannels= eegChannels )
 
-            # Choose randomly 4 sessions for testing and 1 for validation
-            availableSessions = np.array(list(trainDataContainer.keys()))
-            idx = np.arange(len(availableSessions))
-            idx = np.random.choice(idx, 4, replace=False)
-            trSess = availableSessions[idx[:-1]]
-            vlSess = availableSessions[idx[-1]]
+            # Choose randomly 1 session for validation and the rest for training
+            availableSessions = list(trainDataContainer.keys())
+            vlSess = random.choice(availableSessions)
+            availableSessions.remove(vlSess)
+            trSess = availableSessions
 
             # create sets
             firstTrainX.append(np.concatenate([trainDataContainer[i]['X'] for i in trSess]))
