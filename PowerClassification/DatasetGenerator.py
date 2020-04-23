@@ -31,11 +31,12 @@ newColumnNames = [x+'-'+y for x,y in product(EEG_channels, Power_coefficients)] 
 print(newColumnNames)
 
 #Global variables
-users = ['juan','jackie','ryan','jhony']
-windowSize = [10,15,20,25,30,40]
+# users = ['juan','jackie','ryan','jhony']
+users = ['juanBaseline', 'juan']
+windowSize = [60]
 dataPath = Path('./data/')
-rawDataPath = Path('./data/raw_data_eeglab_formatted')
-dstPath = dataPath / 'DifferentWindowSizeDataICA'
+rawDataPath = Path('./data/raw_data')
+dstPath = dataPath / 'DifferentWindowSizeData'
 sf = 250
 
 
@@ -50,9 +51,9 @@ def calculatePowerBand(windowArray, df ):
 
         data2 = data[EEG_channels].transpose().values
 
-        # print(counter, data2.shape[1])
+        # print(counter, data2.shape[1], data2.shape[0])
 
-        if data2.shape[1]>data2.shape[0]:
+        if data2.shape[1]>data2.shape[0]*2:
             # (0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),(12, 30, 'Beta'), (30, 50, 'Gamma')
             # Calculate bandpower
             bd = yasa.bandpower(data2, sf=sf, ch_names=EEG_channels, win_sec=4,
@@ -63,7 +64,13 @@ def calculatePowerBand(windowArray, df ):
 
             # Create row name, label and add to data dict
             rowName = 'T' + str(trial) + '_' + str(counter)
-            label = 1 if np.mean(data['label'].values) > 7.5 else 0
+            meanLabel = np.mean(data['label'].values)
+            if meanLabel > 7.5:
+                label = 1
+            elif 7.5 > meanLabel > 1:
+                label = 0
+            else:
+                label = -1
             bd = np.concatenate((bd, np.array([label]).reshape(1, -1)), axis=1)
             dataDict[rowName] = np.squeeze(bd)
             #Update counter
