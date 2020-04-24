@@ -472,7 +472,7 @@ class CrossValidationRoutines:
             return pd.concat(resultsContainer)
 
     @staticmethod
-    def userCrossValidationMultiUser(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None):
+    def userCrossValidationMultiUser(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None, powerCoefficients = None):
         """
          userCrossValidationMultiUser will perform the crossvalidation process of a model. The main difference
         between userCrossValidation is that training data from multiple user will be added to the training and
@@ -484,6 +484,8 @@ class CrossValidationRoutines:
         4)The rest of the sessions of the testing user go to the training set.
 
         Training and validation have data from multiple users.
+        :param powerCoefficients: This parameter could be either None to use all the available power coefficients
+         or a list of the coefficients that should be included in the data.
         :param eegChannels: This parameter could be either None to use all the available EEG channels
          or a list of the channels that should be included in the data.
         :param lstmSteps:
@@ -499,7 +501,9 @@ class CrossValidationRoutines:
         factoryModule = NetworkFactoryModule()
         resultsContainer = []
 
-        testUserContainer = dataLoaderModule.getDataSplitBySession(dataPath / testUser, timesteps=lstmSteps,eegChannels=eegChannels)
+        testUserContainer = dataLoaderModule.getDataSplitBySession(dataPath / testUser, timesteps=lstmSteps,
+                                                                   eegChannels=eegChannels,
+                                                                   powerBands=powerCoefficients)
 
         # Initially remove testing user from training and create train set without him
         trainingUsers = copy.copy(listOfUsers)
@@ -512,7 +516,9 @@ class CrossValidationRoutines:
         logger = [[], [], []]
         for u in trainingUsers:
             # Open user data
-            trainDataContainer = dataLoaderModule.getDataSplitBySession(dataPath / u, timesteps=lstmSteps, eegChannels= eegChannels )
+            trainDataContainer = dataLoaderModule.getDataSplitBySession(dataPath / u, timesteps=lstmSteps,
+                                                                        eegChannels= eegChannels,
+                                                                        powerBands=powerCoefficients )
 
             # Choose randomly 1 session for validation and the rest for training
             availableSessions = list(trainDataContainer.keys())
