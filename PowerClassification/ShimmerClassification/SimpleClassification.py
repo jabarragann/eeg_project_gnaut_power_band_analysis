@@ -91,8 +91,8 @@ if __name__== '__main__':
     for i, j in zip(predicted, yTest):
         confusionMatrix[i.item(), j.item()] += 1
 
-    confusionMatrix = confusionMatrix/yTest.shape[0]
-    testEvaluation2 =  np.sum(yTest == predicted) / yTest.shape[0]
+    confusionMatrix = confusionMatrix
+    testEvaluation2 =  np.sum(yTest == predicted)
     confusionMatrix = pd.DataFrame(data=confusionMatrix,
                                    index=["Predicted low", "Predicted high"],
                                    columns=["Actual low", "Actual high"])
@@ -108,7 +108,8 @@ if __name__== '__main__':
     axes[1].plot(history.history['loss'],label='train')
     axes[1].plot(history.history['val_loss'],label='test')
     axes[1].legend()
-    sns.heatmap(confusionMatrix, annot=True, fmt="0.2%", linewidths=.5, ax=axes[2])
+    #"0.2%"
+    sns.heatmap(confusionMatrix, annot=True, fmt="0.2f", linewidths=.5, ax=axes[2])
     plt.tight_layout()
     plt.show()
 
