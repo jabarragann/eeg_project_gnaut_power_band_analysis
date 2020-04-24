@@ -10,8 +10,8 @@ sns.set()
 if __name__ =='__main__':
 
     #Iterate through all the results files
-    user = 'ryan'
-    resultsDir = 'fChannelsExp-NoICA'
+    user = 'jhony'
+    resultsDir = '/temp/f-c-ChannelsExp-WithNoICA1'
     path = Path('./').resolve().parent / 'results' / 'results_transfer9' / resultsDir
     dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
     for file in path.glob('*.csv'):

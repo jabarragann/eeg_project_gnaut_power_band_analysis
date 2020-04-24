@@ -13,8 +13,8 @@ import itertools
 if __name__ == '__main__':
     USERS = ['ryan','juan', 'jackie','jhony']
     EEG_CHANNELS = ['FZ', 'F7', 'F3', 'F4', 'F8']
-    LSTM_SAMPLE_SIZE = [60,75,90,105,120]
-    WINDOW_SIZE = [10,15,20,25,30,40]
+    LSTM_SAMPLE_SIZE = [60,105, 90, 120, 135, 150]
+    WINDOW_SIZE = [10,20,30,40,50,60]
 
     crossValidationModule = CrossValidationRoutines()
     utilsModule = Utils()
@@ -25,8 +25,8 @@ if __name__ == '__main__':
         completeResults = []
 
         for user in ['ryan','juan', 'jackie','jhony']:
-            dataPath = Path('./data/DifferentWindowSizeDataICA/{:02d}s/'.format(windowSize))
-            resultsPath = Path('./results/results_transfer9') / 'fChannelsExp-WithICA'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
+            dataPath = Path('./data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
+            resultsPath = Path('./results/results_transfer9') / '/temp/f-c-ChannelsExp-WithNoICA-bigGrid'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():
                 print('create ', resultsPath)

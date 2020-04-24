@@ -19,7 +19,7 @@ if __name__ == '__main__':
     #Sample frequency
     sf = 250
 
-    user = 'ryan'
+    user = 'juanBaseline'
 
     for user in ['juan','jackie','ryan','jhony']:
         dataPath = './raw_data/{:}/'.format(user)
