@@ -22,9 +22,9 @@ POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
 if __name__ == '__main__':
     USERS = ['ryan','juan', 'jackie','jhony']
     EEG_CHANNELS = ['FZ', 'F7', 'F3', 'F4', 'F8']
-    POWER_COEFFICIENTS = ['Theta', 'Alpha', 'Beta', 'Gamma']
+    POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
     LSTM_SAMPLE_SIZE = [120]
-    WINDOW_SIZE = [10,15,20]
+    WINDOW_SIZE = [10]
 
     crossValidationModule = CrossValidationRoutines()
     utilsModule = Utils()
@@ -40,9 +40,11 @@ if __name__ == '__main__':
         lstmSteps = int(lstmSampleSize/windowSize)
         completeResults = []
 
-        for user in ['ryan','juan', 'jackie','jhony']:
+        #['ryan','juan', 'jackie','jhony']
+        for user in ['jackie']:
             dataPath = Path('./data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
-            resultsPath = Path('./results/results_transfer9') / 'selecCoef/f-TABG-coeffExp1'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
+            resultsPath = Path('./results/EegResults/results_transfer9/')  \
+                          / 'temp/temp2'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():
                 print('create ', resultsPath)

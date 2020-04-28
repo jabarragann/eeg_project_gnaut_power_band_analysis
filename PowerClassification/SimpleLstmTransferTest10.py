@@ -43,7 +43,7 @@ if __name__ == '__main__':
         for user in ['jackie']:
             dataPath = Path('./data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
             resultsPath = Path('./results/EegResults/results_transfer10/')  \
-                          / 'temp2/'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
+                          / 'temp3/'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():
                 print('create ', resultsPath)
