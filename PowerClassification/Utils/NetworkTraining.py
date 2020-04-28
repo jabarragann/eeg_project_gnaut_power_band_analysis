@@ -696,7 +696,7 @@ class TransferLearningModule:
         # Train Model - First round
         model, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
         history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY,
-                                                                           epochs=5, verbose=0)
+                                                                           epochs=700, verbose=0)
 
         # Plot results
         plotTitle = 'Training_first_round_{:}'.format(testUser)
@@ -751,7 +751,7 @@ class TransferLearningModule:
                                                                                                transferValY,
                                                                                                X_test=testX,
                                                                                                y_test=testY,
-                                                                                               epochs=5,
+                                                                                               epochs=700,
                                                                                                verbose=0)
 
                     #Plot training history
@@ -765,11 +765,11 @@ class TransferLearningModule:
 
                     # Save all the results
                     data = {testingKey: [testUser, modelName,
-                                         testingKey,
+                                         testingKey, "{:0.2f}".format((1/8) * i),
                                          evalTestBefore, evalTestAfter, ]}
 
                     df1 = pd.DataFrame.from_dict(data, orient='index',
-                                                 columns=['User', 'ModelName', 'TestSession',
+                                                 columns=['User', 'ModelName', 'TestSession', 'proportionOfTransfer',
                                                           'TestAccBefore', 'TestAccAfter',])
                     resultsContainer.append(df1)
         except Exception as e:
