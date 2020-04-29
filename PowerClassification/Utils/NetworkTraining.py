@@ -331,7 +331,7 @@ class NetworkTrainingModule:
         return history, model, earlyStopCallback
 
     @staticmethod
-    def createPlot(trainingHistory, title, path, show_plot=False, earlyStopCallBack=None):
+    def createPlot(trainingHistory, title, path, show_plot=False, earlyStopCallBack=None, save=True):
         '''
         Create plots from training history
         :param trainingHistory:
@@ -359,8 +359,8 @@ class NetworkTrainingModule:
 
         if show_plot:
             plt.show()
-
-        plt.savefig(str(path) + '.png')
+        if save:
+            plt.savefig(str(path) + '.png')
         plt.close(fig)
 
     # Auxiliary classes
@@ -657,7 +657,70 @@ class TransferLearningModule:
     """
     Testing multiuser models with transfer learning.
     """
-    def transferCrossValidation(self, lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None, powerCoefficients = None):
+    def testMultiUserModels (self, lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None, powerCoefficients = None):
+        dataLoaderModule = DataLoaderModule()
+        trainingModule = NetworkTrainingModule()
+        factoryModule = NetworkFactoryModule()
+        resultsContainer = []
+
+        testUserContainer = dataLoaderModule.getDataSplitBySession(dataPath / testUser, timesteps=lstmSteps,
+                                                                   eegChannels=eegChannels,
+                                                                   powerBands=powerCoefficients)
+
+        # Initially remove testing user from training and create train set without him
+        trainingUsers = copy.copy(listOfUsers)
+        trainingUsers.remove(testUser)
+
+        # Load train and validation sets
+        r1 = dataLoaderModule.createTrainAndValFromTrainUsers(trainingUsers, dataPath=dataPath,
+                                                              timesteps=lstmSteps,
+                                                              eegChannels=eegChannels,
+                                                              powerBands=powerCoefficients)
+        trainX, trainY, valX, valY, logger = r1
+
+        # Concatenate all sessions for validation and training
+        trainX = np.concatenate(trainX)
+        trainY = np.concatenate(trainY)
+        valX = np.concatenate(valX)
+        valY = np.concatenate(valY)
+        # One hot encode
+        trainY = to_categorical(trainY)
+        valY = to_categorical(valY)
+        # Normalizers
+        globalMean = trainX.mean(axis=(0, 1))
+        globalStd = trainX.std(axis=(0, 1))
+
+        trainX = (trainX - globalMean) / (globalStd + 1e-18)
+        valX = (valX - globalMean) / (globalStd + 1e-18)
+
+        # Train Model - First round
+        model, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+        history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY,
+                                                                           epochs=700, verbose=0)
+
+        # Plot results
+        plotTitle = 'Training_first_round_{:}'.format(testUser)
+        completePlotPath = plotPath / plotTitle
+        trainingModule.createPlot(history, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping,
+                                  show_plot=True,save=False)
+
+        allAcc = []
+        for testingKey in testUserContainer.keys():
+            testX = testUserContainer[testingKey]['X']
+            testY = testUserContainer[testingKey]['y']
+
+            # Convert and normalize
+            testY = to_categorical(testY)
+            testX = (testX - globalMean) / (globalStd + 1e-18)
+            evalTestBefore = model.evaluate(testX, testY, verbose=0)[1]
+            K.clear_session()
+
+            allAcc.append(evalTestBefore)
+            print("testing Key: {:} Accuracy: {:0.4%}".format(testingKey, evalTestBefore))
+        print("Global Mean: {:0.4%}".format(sum(allAcc)/len(allAcc)))
+
+    @staticmethod
+    def transferCrossValidation(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None, powerCoefficients = None):
         dataLoaderModule = DataLoaderModule()
         trainingModule = NetworkTrainingModule()
         factoryModule = NetworkFactoryModule()
@@ -744,7 +807,7 @@ class TransferLearningModule:
                     #Training stage two - Transfer
                     transferModel, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
                     transferModel.set_weights(bestWeightsFirstRound)
-                    transferHistory, model, earlyStopping = trainingModule.trainModelEarlyStop(transferModel,
+                    transferHistory, transferModel, earlyStopping = trainingModule.trainModelEarlyStop(transferModel,
                                                                                                trainPortionX,
                                                                                                trainPortionY,
                                                                                                transferValX,
@@ -760,12 +823,12 @@ class TransferLearningModule:
                     trainingModule.createPlot(transferHistory, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping)
 
                     #Test results again
-                    evalTestAfter = model.evaluate(testX, testY, verbose=1)[1]
+                    evalTestAfter = transferModel.evaluate(testX, testY, verbose=0)[1]
                     K.clear_session()
 
                     # Save all the results
                     data = {testingKey: [testUser, modelName,
-                                         testingKey, "{:0.2f}".format((1/8) * i),
+                                         testingKey, "{:0.3f}".format((1/8) * i),
                                          evalTestBefore, evalTestAfter, ]}
 
                     df1 = pd.DataFrame.from_dict(data, orient='index',

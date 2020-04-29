@@ -36,7 +36,7 @@ if __name__ == '__main__':
         completeResults = []
 
         #['ryan','juan', 'jackie','jhony']
-        for user in ['jackie']:
+        for user in ['juan']:
             dataPath = Path('./../../data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
             resultsPath = Path('./results/EegResults/results_transfer10/')  \
                           / 'temp3/'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
