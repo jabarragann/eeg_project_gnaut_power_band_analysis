@@ -809,20 +809,20 @@ class TransferLearningModule:
                     #Training stage two - Transfer
                     transferModel, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
                     transferModel.set_weights(bestWeightsFirstRound)
-                    # transferHistory, transferModel, earlyStopping = trainingModule.trainModelEarlyStop(transferModel,
-                    #                                                                            trainPortionX,
-                    #                                                                            trainPortionY,
-                    #                                                                            transferValX,
-                    #                                                                            transferValY,
-                    #                                                                            X_test=testX,
-                    #                                                                            y_test=testY,
-                    #                                                                            epochs=700,
-                    #                                                                            verbose=0)
-                    #
-                    # #Plot training history
-                    # plotTitle = '{:}_test{:}_PercentageOfTraining{:0.2%}_'.format(testUser, testingKey, (1/8) * i)
-                    # completePlotPath = plotPath / plotTitle
-                    # trainingModule.createPlot(transferHistory, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping)
+                    transferHistory, transferModel, earlyStopping = trainingModule.trainModelEarlyStop(transferModel,
+                                                                                               trainPortionX,
+                                                                                               trainPortionY,
+                                                                                               transferValX,
+                                                                                               transferValY,
+                                                                                               X_test=testX,
+                                                                                               y_test=testY,
+                                                                                               epochs=700,
+                                                                                               verbose=0)
+
+                    #Plot training history
+                    plotTitle = '{:}_test{:}_PercentageOfTraining{:0.2%}_'.format(testUser, testingKey, (1/8) * i)
+                    completePlotPath = plotPath / plotTitle
+                    trainingModule.createPlot(transferHistory, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping)
 
                     #Test results again
                     evalTestAfter = transferModel.evaluate(testX, testY, verbose=0)[1]
