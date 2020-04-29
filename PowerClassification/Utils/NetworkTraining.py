@@ -276,7 +276,7 @@ class NetworkTrainingModule:
 
     def trainModelEarlyStop(self, model, X_train, y_train,
                             X_val, y_val, X_test=None, y_test=None,
-                            batchSize=128, epochs=300, debug=True, verbose=1):
+                            batchSize=128, epochs=300, debug=False, verbose=1):
         """
             The following function trains a model with the given train data and validation data.
             At the same time it checks the performance of the model in the testing set through the
@@ -796,34 +796,40 @@ class TransferLearningModule:
                 ############################################################
 
                 #Test results before
-                evalTestBefore = model.evaluate(testX, testY, verbose=1)[1]
+                evalTestBefore = model.evaluate(testX, testY, verbose=0)[1]
+                print("Testing set {:} acc before {:0.3%}".format(testingKey,evalTestBefore))
                 K.clear_session()
 
                 for i in range(1,9):
-                    portion = int(transferTrainX.shape[0] * (1/8) * i)
+                    percentage =  (1/8) * i
+                    portion = int(transferTrainX.shape[0] * percentage)
                     trainPortionX = transferTrainX[:portion,:,:]
                     trainPortionY = transferTrainY[:portion,:]
 
                     #Training stage two - Transfer
                     transferModel, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
                     transferModel.set_weights(bestWeightsFirstRound)
-                    transferHistory, transferModel, earlyStopping = trainingModule.trainModelEarlyStop(transferModel,
-                                                                                               trainPortionX,
-                                                                                               trainPortionY,
-                                                                                               transferValX,
-                                                                                               transferValY,
-                                                                                               X_test=testX,
-                                                                                               y_test=testY,
-                                                                                               epochs=700,
-                                                                                               verbose=0)
-
-                    #Plot training history
-                    plotTitle = '{:}_test{:}_PercentageOfTraining{:0.2%}_'.format(testUser, testingKey, (1/8) * i)
-                    completePlotPath = plotPath / plotTitle
-                    trainingModule.createPlot(transferHistory, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping)
+                    # transferHistory, transferModel, earlyStopping = trainingModule.trainModelEarlyStop(transferModel,
+                    #                                                                            trainPortionX,
+                    #                                                                            trainPortionY,
+                    #                                                                            transferValX,
+                    #                                                                            transferValY,
+                    #                                                                            X_test=testX,
+                    #                                                                            y_test=testY,
+                    #                                                                            epochs=700,
+                    #                                                                            verbose=0)
+                    #
+                    # #Plot training history
+                    # plotTitle = '{:}_test{:}_PercentageOfTraining{:0.2%}_'.format(testUser, testingKey, (1/8) * i)
+                    # completePlotPath = plotPath / plotTitle
+                    # trainingModule.createPlot(transferHistory, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping)
 
                     #Test results again
                     evalTestAfter = transferModel.evaluate(testX, testY, verbose=0)[1]
+                    print("Testing set {:} acc after {:0.3%} with {:d}/{:d} ({:0.3%}) samples".format(testingKey, evalTestAfter,
+                                                                                                      trainPortionX.shape[0],
+                                                                                                      transferTrainX.shape[0],
+                                                                                                      percentage))
                     K.clear_session()
 
                     # Save all the results

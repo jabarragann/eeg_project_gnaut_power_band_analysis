@@ -39,8 +39,8 @@ if __name__ == '__main__':
         lstmSteps = int(lstmSampleSize/windowSize)
         completeResults = []
 
-        #['ryan','juan', 'jackie','jhony']
-        for user in ['jackie']:
+
+        for user in ['ryan','jhony','juan', 'jackie']:
             dataPath = Path('./data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
             resultsPath = Path('./results/EegResults/results_transfer10/')  \
                           / 'jackie/'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
