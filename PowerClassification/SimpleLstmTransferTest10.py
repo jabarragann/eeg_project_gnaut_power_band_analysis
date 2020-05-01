@@ -24,6 +24,7 @@ if __name__ == '__main__':
     POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
     LSTM_SAMPLE_SIZE = [120]
     WINDOW_SIZE = [10]
+    RESULTS_ROOT = Path('./results/EegResults/results_transfer10/') / 'round3-real/'
 
     transferModule = TransferLearningModule()
     utilsModule = Utils()
@@ -32,7 +33,8 @@ if __name__ == '__main__':
     params = {'users':USERS,'eeg channels':EEG_CHANNELS,
               'power coefficients':POWER_COEFFICIENTS,
               'lstm sample sizes':LSTM_SAMPLE_SIZE,
-              'window size': WINDOW_SIZE}
+              'window size': WINDOW_SIZE,
+              'results root':RESULTS_ROOT}
 
     for lstmSampleSize,windowSize in itertools.product(LSTM_SAMPLE_SIZE,WINDOW_SIZE):
 
@@ -42,8 +44,7 @@ if __name__ == '__main__':
 
         for user in ['ryan','jhony','juan', 'jackie']:
             dataPath = Path('./data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
-            resultsPath = Path('./results/EegResults/results_transfer10/')  \
-                          / 'round1/'/ 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
+            resultsPath = RESULTS_ROOT / 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():
                 print('create ', resultsPath)
