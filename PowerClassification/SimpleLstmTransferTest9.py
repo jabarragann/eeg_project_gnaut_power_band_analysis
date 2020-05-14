@@ -4,6 +4,9 @@ Grid search for the best lstm sample size and windows size.
 multi user
 '''
 
+from pathlib import Path
+import sys
+sys.path.append(r'C:\Users\asus\PycharmProjects\eeg_project_gnaut_power_band_analysis')
 from PowerClassification.Utils.NetworkTraining import CrossValidationRoutines
 from PowerClassification.Utils.NetworkTraining import Utils
 from pathlib import Path
@@ -52,13 +55,13 @@ def readCommandLineArg(params):
 
 if __name__ == '__main__':
     #Initial parameters
-    paramsDict = {'TESTED_USERS': ['jackie', 'Juan'],
-              'ALL_USERS': ['juan', 'jackie'],
+    paramsDict = {'TESTED_USERS': ['jackie', 'juan','ryan'],
+              'ALL_USERS': ['juan', 'jackie', 'ryan'],
               'EEG_CHANNELS': ['FZ', 'F7', 'F3', 'F4', 'F8'],
               'POWER_COEFFICIENTS': ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'],
               'LSTM_SAMPLE_SIZE': [120, 135, 150],
               'WINDOW_SIZE': [10, 20, 30],
-              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/exp04_30/' / 'OnlyJuanJackie'
+              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/exp04_30/' / 'TestedJuanJackieRyanTrainJuanJackieRyan'
               }
     # Read command line arguments if any
     paramsDict = readCommandLineArg(paramsDict)
@@ -67,7 +70,9 @@ if __name__ == '__main__':
     #Load main modules
     crossValidationModule = CrossValidationRoutines()
     utilsModule = Utils()
-
+    #Print parameter dict
+    for k, i in paramsDict.items():
+        print(k, i)
     #Main Script
     for lstmSampleSize,windowSize in itertools.product(params.LSTM_SAMPLE_SIZE, params.WINDOW_SIZE):
 

@@ -11,7 +11,7 @@ import numpy as np
 plt.style.use('seaborn-dark')
 
 if __name__ == '__main__':
-
+    userDict = {'ryan':'User 1', 'jhony':'User 2','juan':'User 3','jackie':'User 4'}
     #Format data
     df = pd.read_csv("./Data/window10s_sampleSize120s-round2.csv")
     proportions = df.proportionOfTransfer.unique()
@@ -42,8 +42,11 @@ if __name__ == '__main__':
     axes = axes.reshape(-1)
     colors = ['blue','green','red','cyan','magenta','black']
 
+    fig.text(0.5, 0.04, 'Percentage of test user data', ha='center', fontsize=12)
+    fig.text(0.04, 0.5, 'Classification accuracy', va='center', rotation='vertical', fontsize=12)
+
     for idx, u in enumerate(users):
-        axes[idx].set_title(u)
+        axes[idx].set_title(userDict[u])
         axes[idx].set_ylim((0.5,1))
         axes[idx].grid()
 
@@ -58,6 +61,7 @@ if __name__ == '__main__':
 
         #Plot data
         axes[idx].errorbar(x, means, yerr=std, fmt='o', linestyle='-', ecolor='black', capsize=5,color=colors[idx])
+        axes[idx].fill_between(x, means+std, means-std, facecolor=colors[idx], alpha=0.15)
 
     #Create summary graph of all users
     fig2, ax = plt.subplots(1,1)
@@ -71,8 +75,9 @@ if __name__ == '__main__':
     std = temp.std(axis=0)
     x = list(map(lambda l: float(l), prop))
     ax.errorbar(x, means, yerr=std, fmt='o', linestyle='-', ecolor='black', capsize=5,color='orange')
+    ax.fill_between(x, means + std, means - std, facecolor='orange', alpha=0.15)
     ax.set_xticks(x)
-    ax.set_xlabel("Percentage of test user data used in training")
-    ax.set_ylabel("Accuracy")
+    ax.set_xlabel("Percentage of test user data")
+    ax.set_ylabel("Classification Accuracy")
 
     plt.show()

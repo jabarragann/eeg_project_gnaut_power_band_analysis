@@ -35,7 +35,7 @@ if __name__ == '__main__':
 	cmd3 = ['python', './SimpleLstmTransferTest9.py',
 			'--TESTED_USERS', '[Juan Jackie Jhony Ryan]',
 			'--ALL_USERS', '[Juan Jackie Jhony Ryan]',
-			'--RESULTS_ROOT', str(resultsPath / 'PowerBandsAll'),
+			'--RESULTS_ROOT', str(resultsPath / 'PowerBands_LDTABG'),
 			'--LSTM_SAMPLE_SIZE', '[120 135 150]',
 			'--WINDOW_SIZE', '[10 20 30]',
 			'--POWER_COEFFICIENTS', '[Low Delta Theta Alpha Beta Gamma]'
