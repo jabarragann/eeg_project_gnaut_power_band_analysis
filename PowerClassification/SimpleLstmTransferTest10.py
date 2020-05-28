@@ -19,7 +19,7 @@ POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
 '''
 
 if __name__ == '__main__':
-    USERS = ['ryan','juan', 'jackie','jhony']
+    USERS = ['ryan','juan', 'jackie','jhony', 'karuna','santy']
     EEG_CHANNELS = ['FZ', 'F7', 'F3', 'F4', 'F8']
     POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
     LSTM_SAMPLE_SIZE = [120]

@@ -38,7 +38,7 @@ if __name__ == '__main__':
     #Create Individual graphs for each user
     nrow = 2
     ncol = 2
-    fig, axes = plt.subplots(nrows=nrow, ncols=ncol, sharex="col")
+    fig, axes = plt.subplots(nrows=nrow, ncols=ncol, sharex="col", sharey='row')
     axes = axes.reshape(-1)
     colors = ['blue','green','red','cyan','magenta','black']
 

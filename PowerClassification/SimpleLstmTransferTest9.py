@@ -55,13 +55,13 @@ def readCommandLineArg(params):
 
 if __name__ == '__main__':
     #Initial parameters
-    paramsDict = {'TESTED_USERS': ['jackie', 'juan','ryan'],
-              'ALL_USERS': ['juan', 'jackie', 'ryan'],
+    paramsDict = {'TESTED_USERS': ['jackie', 'juan','ryan', 'johny'],
+              'ALL_USERS': ['juan', 'jackie', 'ryan', 'karuna','santy'],
               'EEG_CHANNELS': ['FZ', 'F7', 'F3', 'F4', 'F8'],
               'POWER_COEFFICIENTS': ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'],
               'LSTM_SAMPLE_SIZE': [120, 135, 150],
               'WINDOW_SIZE': [10, 20, 30],
-              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/exp04_30/' / 'TestedJuanJackieRyanTrainJuanJackieRyan'
+              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa_santyKarunaData/'
               }
     # Read command line arguments if any
     paramsDict = readCommandLineArg(paramsDict)
@@ -70,6 +70,8 @@ if __name__ == '__main__':
     #Load main modules
     crossValidationModule = CrossValidationRoutines()
     utilsModule = Utils()
+
+    p = params.RESULTS_ROOT
     #Print parameter dict
     for k, i in paramsDict.items():
         print(k, i)

@@ -32,8 +32,8 @@ print(newColumnNames)
 
 #Global variables
 # users = ['juan','jackie','ryan','jhony']
-users = ['juanBaseline', 'juan']
-windowSize = [60]
+# users = ['juanBaseline', 'juan']
+windowSize = [5, 10, 15, 20, 25, 30]
 dataPath = Path('./data/')
 rawDataPath = Path('./data/raw_data')
 dstPath = dataPath / 'DifferentWindowSizeData'
@@ -106,10 +106,12 @@ if __name__ == '__main__':
             df = pd.read_csv(f2, sep=',')
 
             #Initial values
-            result = df.loc[(df['markerValue'] == 'not_active') &
-                             (df['5SecondWindow'] == 'WindowStart')]
-            startIdx = result.index.values[0]
-            startTime = result['COMPUTER_TIME'].values[0]
+            # result = df.loc[(df['markerValue'] == 'not_active') &
+            #             #                  (df['5SecondWindow'] == 'WindowStart')]
+            #             # startIdx = result.index.values[0]
+
+            startIdx = 0
+            startTime = df['COMPUTER_TIME'].values[0]
 
             windowCounter = 0
             windowArray = []

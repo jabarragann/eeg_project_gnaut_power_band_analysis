@@ -203,17 +203,23 @@ class DataLoaderModule:
 
             # Choose randomly 1 session for validation and the rest for training
             availableSessions = list(trainDataContainer.keys())
-            vlSess = random.choice(availableSessions)
-            availableSessions.remove(vlSess)
-            trSess = availableSessions
 
-            # create sets
-            firstTrainX.append(np.concatenate([trainDataContainer[i]['X'] for i in trSess]))
-            firstTrainY.append(np.concatenate([trainDataContainer[i]['y'] for i in trSess]))
-            firstValX.append(np.concatenate([trainDataContainer[i]['X'] for i in vlSess]))
-            firstValY.append(np.concatenate([trainDataContainer[i]['y'] for i in vlSess]))
+            if len(availableSessions) > 3:
+                vlSess = random.choice(availableSessions)
+                availableSessions.remove(vlSess)
+                trSess = availableSessions
 
-            logger[0].append(u), logger[1].append(trSess), logger[2].append(vlSess)
+                # create sets
+                firstTrainX.append(np.concatenate([trainDataContainer[i]['X'] for i in trSess]))
+                firstTrainY.append(np.concatenate([trainDataContainer[i]['y'] for i in trSess]))
+                firstValX.append(np.concatenate([trainDataContainer[i]['X'] for i in vlSess]))
+                firstValY.append(np.concatenate([trainDataContainer[i]['y'] for i in vlSess]))
+
+                logger[0].append(u), logger[1].append(trSess), logger[2].append(vlSess)
+            else:
+                firstTrainX.append(np.concatenate([trainDataContainer[i]['X'] for i in availableSessions]))
+                firstTrainY.append(np.concatenate([trainDataContainer[i]['y'] for i in availableSessions]))
+                logger[0].append(u), logger[1].append(availableSessions), logger[2].append('')
 
         return firstTrainX, firstTrainY, firstValX, firstValY, logger
 
