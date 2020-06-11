@@ -19,11 +19,10 @@ import re
 import yasa
 
 #Channels PO7 and PO8 are not included
-EEG_channels = [
-                    "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
-                    "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
-                    "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
-                    "PZ","P4","P8","PO3","PO4","OZ"]
+EEG_channels = [  "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
+                  "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
+                  "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
+                  "PZ","P4","P8","PO7","PO3","PO4","PO8","OZ"]
 
 Power_coefficients = ['Low','Delta','Theta','Alpha','Beta', 'Gamma']
 
@@ -32,11 +31,11 @@ print(newColumnNames)
 
 #Global variables
 # users = ['juan','jackie','ryan','jhony']
-# users = ['juanBaseline', 'juan']
-windowSize = [5, 10, 15, 20, 25, 30]
+users = ['karuna', 'santy']
+windowSize = [10, 20, 30]
 dataPath = Path('./data/')
-rawDataPath = Path('./data/raw_data')
-dstPath = dataPath / 'DifferentWindowSizeData'
+rawDataPath = Path('./data/raw_data_pyprep')
+dstPath = dataPath / 'DifferentWindowSizeData_pyprep'
 sf = 250
 
 
@@ -93,56 +92,58 @@ if __name__ == '__main__':
 
         #Check all the raw files and create a file with the specified data file
         for f2 in rawDataPath.rglob(('*.txt')):
-            dstPathFinal = dstPath/'{:02d}s/{:}'.format(w1,f2.parent.name)
-            u1 = f2.parent.name
-            if not Path.exists( dstPathFinal ):
-                utilities.makeDir(dstPathFinal)
 
-            # Get trial and session. Open data with pandas
-            trial = re.findall("S[0-9]_T[0-9]", f2.name)
-            trial = int(trial[0][-1])
-            session = re.findall("S[0-9]_T[0-9]", f2.name)
-            session = int(session[0][-4])
-            df = pd.read_csv(f2, sep=',')
+            if f2.parent.name in users:
+                dstPathFinal = dstPath/'{:02d}s/{:}'.format(w1,f2.parent.name)
+                u1 = f2.parent.name
+                if not Path.exists( dstPathFinal ):
+                    utilities.makeDir(dstPathFinal)
 
-            #Initial values
-            # result = df.loc[(df['markerValue'] == 'not_active') &
-            #             #                  (df['5SecondWindow'] == 'WindowStart')]
-            #             # startIdx = result.index.values[0]
+                # Get trial and session. Open data with pandas
+                trial = re.findall("S[0-9]_T[0-9]", f2.name)
+                trial = int(trial[0][-1])
+                session = re.findall("S[0-9]_T[0-9]", f2.name)
+                session = int(session[0][-4])
+                df = pd.read_csv(f2, sep=',')
 
-            startIdx = 0
-            startTime = df['COMPUTER_TIME'].values[0]
+                #Initial values
+                # result = df.loc[(df['markerValue'] == 'not_active') &
+                #             #                  (df['5SecondWindow'] == 'WindowStart')]
+                #             # startIdx = result.index.values[0]
 
-            windowCounter = 0
-            windowArray = []
-            while True:
-                #Get end Idx
-                result = df.loc[df['COMPUTER_TIME'] > (startTime+w1)]
+                startIdx = 0
+                startTime = df['COMPUTER_TIME'].values[0]
 
-                #Check if end was reached
-                if result.shape[0] <= 1:
-                    endIdx = df.index.values[-1]
-                    endTime = df['COMPUTER_TIME'].values[-1]
-                    t = [windowCounter, startIdx, endIdx, endTime-startTime]
+                windowCounter = 0
+                windowArray = []
+                while True:
+                    #Get end Idx
+                    result = df.loc[df['COMPUTER_TIME'] > (startTime+w1)]
+
+                    #Check if end was reached
+                    if result.shape[0] <= 1:
+                        endIdx = df.index.values[-1]
+                        endTime = df['COMPUTER_TIME'].values[-1]
+                        t = [windowCounter, startIdx, endIdx, endTime-startTime]
+                        windowArray.append(t)
+                        break
+
+                    endIdx = result.index.values[0]
+                    endTime = result['COMPUTER_TIME'].values[0]
+                    t = [windowCounter,startIdx,endIdx, endTime-startTime]
                     windowArray.append(t)
-                    break
 
-                endIdx = result.index.values[0]
-                endTime = result['COMPUTER_TIME'].values[0]
-                t = [windowCounter,startIdx,endIdx, endTime-startTime]
-                windowArray.append(t)
+                    #Update values
+                    windowCounter += 1
+                    startIdx = endIdx + 1
+                    startTime = result['COMPUTER_TIME'].values[1]
 
-                #Update values
-                windowCounter += 1
-                startIdx = endIdx + 1
-                startTime = result['COMPUTER_TIME'].values[1]
+                windowArray =  np.array(windowArray)
+                powerBandFile = calculatePowerBand(windowArray,df)
 
-            windowArray =  np.array(windowArray)
-            powerBandFile = calculatePowerBand(windowArray,df)
+                pf = dstPathFinal / '{:}_S{:d}_T{:}_pow.txt'.format(u1,session,trial)
+                powerBandFile.to_csv(pf, sep=',')
 
-            pf = dstPathFinal / '{:}_S{:d}_T{:}_pow.txt'.format(u1,session,trial)
-            powerBandFile.to_csv(pf, sep=',')
+                print(pf)
 
-            print(pf)
-
-        utilities.sendSMS('The dataset creation finished')
+            utilities.sendSMS('The dataset creation finished')

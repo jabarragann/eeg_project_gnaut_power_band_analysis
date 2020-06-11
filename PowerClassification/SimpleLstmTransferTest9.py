@@ -55,13 +55,13 @@ def readCommandLineArg(params):
 
 if __name__ == '__main__':
     #Initial parameters
-    paramsDict = {'TESTED_USERS': ['jackie', 'juan','ryan', 'johny'],
-              'ALL_USERS': ['juan', 'jackie', 'ryan', 'karuna','santy'],
+    paramsDict = {'TESTED_USERS': ['karuna','santy','juan', 'jackie', 'ryan', 'jhony'],
+              'ALL_USERS': ['juan', 'jackie', 'ryan', 'jhony','karuna','santy'],
               'EEG_CHANNELS': ['FZ', 'F7', 'F3', 'F4', 'F8'],
               'POWER_COEFFICIENTS': ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'],
               'LSTM_SAMPLE_SIZE': [120, 135, 150],
               'WINDOW_SIZE': [10, 20, 30],
-              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa_santyKarunaData/'
+              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa_pyprep/'
               }
     # Read command line arguments if any
     paramsDict = readCommandLineArg(paramsDict)
@@ -82,7 +82,7 @@ if __name__ == '__main__':
         completeResults = []
 
         for user in params.TESTED_USERS:
-            dataPath = Path('./data/DifferentWindowSizeData/{:02d}s/'.format(windowSize))
+            dataPath = Path('./data/DifferentWindowSizeData_pyprep/{:02d}s/'.format(windowSize))
             resultsPath = params.RESULTS_ROOT /'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():
