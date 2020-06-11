@@ -5,11 +5,10 @@ import numpy as np
 import os
 import re
 
-EEG_channels = [
-                    "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
-                    "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
-                    "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
-                    "PZ","P4","P8","PO3","PO4","OZ"]
+EEG_channels = [ "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
+                  "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
+                  "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
+                  "PZ","P4","P8","PO3","PO4","OZ"]
 
 if __name__ == '__main__':
     path = './raw/'
