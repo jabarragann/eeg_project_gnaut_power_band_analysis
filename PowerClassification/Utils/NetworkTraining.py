@@ -274,6 +274,40 @@ class NetworkFactoryModule:
 
         return model1, 'advanceModel'
 
+    @staticmethod
+    def hyperparameterTunning(timesteps, features, lstmLayers, lstmOutputSize,
+                              isBidirectional, inputLayerNeurons=64, inputLayerDropout=0.3):
+
+        timesteps = timesteps
+        features = features
+
+        # Input layer
+        networkInput = Input(shape=(timesteps, features))
+        dropout1 = Dropout(rate=inputLayerDropout)(networkInput)
+
+        # First Hidden layer
+        hidden1 = Dense(inputLayerNeurons, activation='relu')(dropout1)
+        dropout2 = Dropout(rate=0.5)(hidden1)
+        batchNorm1 = BatchNormalization()(dropout2)
+
+        out = batchNorm1
+        for i in range(1, lstmLayers+1):
+            retSeq = False if i == lstmLayers else True
+            lstmLayer = LSTM(lstmOutputSize, stateful=False, return_sequences=retSeq,
+                             dropout=0.5, kernel_regularizer=regularizers.l2(0.05))
+            if isBidirectional:
+                out = Bidirectional(lstmLayer, merge_mode='concat')(out)
+            else:
+                out = lstmLayer(out)
+
+        hidden3 = Dense(2, activation='linear')(out)
+        networkOutput = Softmax()(hidden3)
+
+        model1 = Model(inputs=networkInput, outputs=networkOutput)
+        model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+
+        return model1, 'advanceModel'
+
 class NetworkTrainingModule:
 
     '''
@@ -862,6 +896,6 @@ if __name__ == '__main__':
 
     fact = NetworkFactoryModule()
 
-    network, name= fact.createAdvanceLstmModel(10,150)
+    network, name= fact.hyperparameterTunning(8,100,3,8,True)
 
     network.summary()
