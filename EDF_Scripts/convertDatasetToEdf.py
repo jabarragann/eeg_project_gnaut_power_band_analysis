@@ -17,8 +17,10 @@ mne.set_log_level("WARNING")
 
 if __name__ == "__main__":
 
-    srcPath = "C:/Users/asus/OneDrive - purdue.edu/RealtimeProject/Data/GNautilusInvertedTask_Pyprep"
-    dstPath = "C:/Users/asus/OneDrive - purdue.edu/RealtimeProject/Data/GNautilusInvertedTask_Pyprep_edf"
+    # srcPath = "C:/Users/asus/OneDrive - purdue.edu/RealtimeProject/Data/GNautilusInvertedTask_Pyprep"
+    # dstPath = "C:/Users/asus/OneDrive - purdue.edu/RealtimeProject/Data/GNautilusInvertedTask_Pyprep_edf"
+    srcPath = "./data2/src"
+    dstPath = "./data2/dst"
 
     summaryFile = open("./summary.txt",'w')
 

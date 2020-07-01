@@ -10,10 +10,13 @@ import numpy as np
 
 plt.style.use('seaborn-dark')
 
+userNameMapping  = {'jackie':'Subject 1','ryan':'Subject 2', 'juan':'Subject 3',
+                    'jhony':'Subject 4','karuna':'Subject 5','santy':'Subject 6'}
+
 if __name__ == '__main__':
 
     #Format data
-    df = pd.read_csv("./Data/window10s_sampleSize120s-round2.csv")
+    df = pd.read_csv("./Data/window20s_sampleSize140s.csv")
     proportions = df.proportionOfTransfer.unique()
     users = df.User.unique()
 
@@ -36,14 +39,14 @@ if __name__ == '__main__':
     print(columns)
 
     #Create Individual graphs for each user
-    nrow = 2
+    nrow = 3
     ncol = 2
     fig, axes = plt.subplots(nrows=nrow, ncols=ncol, sharex="col")
     axes = axes.reshape(-1)
     colors = ['blue','green','red','cyan','magenta','black']
 
-    for idx, u in enumerate(users):
-        axes[idx].set_title(u)
+    for idx, u in enumerate(userNameMapping.keys()):
+        axes[idx].set_title(userNameMapping[u])
         axes[idx].set_ylim((0.5,1))
         axes[idx].grid()
 
@@ -61,7 +64,7 @@ if __name__ == '__main__':
 
     #Create summary graph of all users
     fig2, ax = plt.subplots(1,1)
-    ax.set_title("All Users")
+    ax.set_title("All Users average")
     ax.set_ylim((0.5,1))
     ax.grid()
     #Create summary statistics
@@ -72,7 +75,7 @@ if __name__ == '__main__':
     x = list(map(lambda l: float(l), prop))
     ax.errorbar(x, means, yerr=std, fmt='o', linestyle='-', ecolor='black', capsize=5,color='orange')
     ax.set_xticks(x)
-    ax.set_xlabel("Percentage of test user data used in training")
+    ax.set_xlabel("Percentage of calibration data used in re-training")
     ax.set_ylabel("Accuracy")
 
     plt.show()

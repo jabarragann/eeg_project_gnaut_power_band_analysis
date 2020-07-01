@@ -53,15 +53,21 @@ def readCommandLineArg(params):
 
 	return params
 
+#['FZ', 'F7', 'F3', 'F4', 'F8'],
+#['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
+
 if __name__ == '__main__':
     #Initial parameters
     paramsDict = {'TESTED_USERS': ['karuna','santy','juan', 'jackie', 'ryan', 'jhony'],
               'ALL_USERS': ['juan', 'jackie', 'ryan', 'jhony','karuna','santy'],
-              'EEG_CHANNELS': ['FZ', 'F7', 'F3', 'F4', 'F8'],
-              'POWER_COEFFICIENTS': ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma'],
-              'LSTM_SAMPLE_SIZE': [120, 135, 150],
-              'WINDOW_SIZE': [10, 20, 30],
-              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa_pyprep/'
+              'EEG_CHANNELS': [   "FP1","FP2","F7","F3","FZ","F4",
+                                  "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
+                                  "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
+                                  "PZ","P4","P8","PO7","PO3","PO4","PO8","OZ"],
+              'POWER_COEFFICIENTS': ['Low', 'Delta', 'Theta', 'Alpha', 'Beta'],
+              'LSTM_SAMPLE_SIZE': [20,40,60,80,100,120,140],
+              'WINDOW_SIZE': [10,20],
+              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa4_pyprep_lstm_20-140_W10-20/'
               }
     # Read command line arguments if any
     paramsDict = readCommandLineArg(paramsDict)
@@ -97,7 +103,7 @@ if __name__ == '__main__':
 
         completeResults = pd.concat(completeResults)
         completeResults.to_csv(resultsPath.parent / 'window{:02d}s_sampleSize{:02d}s.csv'.format(windowSize,lstmSampleSize) , index = False)
-        utilsModule.sendSMS("Finished window{:02d}s_sampleSize{:02d}s".format(windowSize,lstmSampleSize))
+        # utilsModule.sendSMS("Finished window{:02d}s_sampleSize{:02d}s".format(windowSize,lstmSampleSize))
 
     with open(resultsPath.parent / 'experimentParams.txt','w') as f:
         for k,i in paramsDict.items():

@@ -10,7 +10,7 @@ sns.set()
 if __name__ =='__main__':
     #'/temp/f-c-ChannelsExp-WithNoICA1'
     #Iterate through all the results files
-    resultsDir = 'aa_santyKarunaData/'
+    resultsDir = 'aa3_pyprep/'
     path = Path('./').resolve().parent / 'results' / 'EegResults' /'results_transfer9' / resultsDir
     dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
 

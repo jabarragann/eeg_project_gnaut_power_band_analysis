@@ -146,4 +146,4 @@ if __name__ == '__main__':
 
                 print(pf)
 
-            utilities.sendSMS('The dataset creation finished')
+            # utilities.sendSMS('The dataset creation finished')

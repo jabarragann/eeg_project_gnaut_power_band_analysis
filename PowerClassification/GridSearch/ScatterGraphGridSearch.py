@@ -4,13 +4,13 @@ import numpy as np
 import re
 import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set()
+# sns.set()
 
 
 if __name__ =='__main__':
     #'/temp/f-c-ChannelsExp-WithNoICA1'
     #Iterate through all the results files
-    resultsDir = 'exp05_13/SeeIncrements2/'
+    resultsDir = 'aa4_pyprep_lstm_20-140_W10-20/'
     path = Path('./').resolve().parent / 'results' / 'EegResults' /'results_transfer9' / resultsDir
     dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
 
@@ -39,18 +39,25 @@ if __name__ =='__main__':
 
 
     import matplotlib.pyplot as plt
-    plt.style.use('seaborn-dark')
+    # plt.style.use('seaborn-dark')
     summaryFrame['Windows Size2'] = summaryFrame['Window Size'].astype(str)
     f, ax = plt.subplots(1,1,figsize=(9, 6))
 
-    for w1 in [5,10,15]:
+    for w1 in [10,20]:
         tempFrame = summaryFrame.loc[summaryFrame['Window Size'] == w1]
-        ax.plot(tempFrame["Lstm Sample Size"], tempFrame['meanAcc'],label=str(w1)+"s", marker="*")
+        ax.plot(tempFrame["Lstm Sample Size"], tempFrame['meanAcc'],label=str(w1)+" sec", marker="*")
     ax.set_ylabel("Average prediction accuracy")
-    ax.set_xlabel("Number of seconds of EEG data")
+    ax.set_xlabel("Lstm sample size in seconds")
     ax.set_xticks(tempFrame["Lstm Sample Size"])
     ax.grid()
-    ax.legend()
+    ax.set_title('Hyperparameters Optimization')
+    ax.legend(title="Window Size", fancybox = True, shadow=True, )
+    ax.set_facecolor('0.9')
+
+    # frame = legend.get_frame()  # sets up for color, edge, and transparency
+    # frame.set_facecolor('#b4aeae')  # color of legend
+    # frame.set_edgecolor('black')  # edge color of legend
+    # frame.set_alpha(1)  # deals with transparency
     plt.show()
 
     # f, ax = plt.subplots(figsize=(9, 6))

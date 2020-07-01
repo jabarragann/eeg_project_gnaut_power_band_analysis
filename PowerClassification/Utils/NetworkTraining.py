@@ -244,7 +244,7 @@ class NetworkFactoryModule:
 
     @staticmethod
     def createAdvanceLstmModel(timesteps, features, isBidirectional=True, inputLayerNeurons=64, inputLayerDropout=0.3,
-                               lstmSize=4):
+                               lstmOutputSize=4):
         timesteps = timesteps
         features = features
 
@@ -259,12 +259,12 @@ class NetworkFactoryModule:
 
         # Choose if the network should be bidirectional
         if isBidirectional:
-            lstmLayer = LSTM(lstmSize, stateful=False,
+            lstmLayer = LSTM(lstmOutputSize, stateful=False,
                              dropout=0.5, kernel_regularizer=regularizers.l2(0.05))
             # hidden2 = Bidirectional( LSTM(lstmSize, stateful=False, dropout=0.5), merge_mode='concat' ) (batchNorm1)
             hidden2 = Bidirectional(lstmLayer, merge_mode='concat')(batchNorm1)
         else:
-            hidden2 = LSTM(lstmSize, stateful=False, dropout=0.5)(batchNorm1)
+            hidden2 = LSTM(lstmOutputSize, stateful=False, dropout=0.5)(batchNorm1)
 
         hidden3 = Dense(2, activation='linear')(hidden2)
         networkOutput = Softmax()(hidden3)
@@ -856,3 +856,12 @@ class TransferLearningModule:
 
     def transferLearningAcrossUsers(self):
         pass
+
+
+if __name__ == '__main__':
+
+    fact = NetworkFactoryModule()
+
+    network, name= fact.createAdvanceLstmModel(10,150)
+
+    network.summary()

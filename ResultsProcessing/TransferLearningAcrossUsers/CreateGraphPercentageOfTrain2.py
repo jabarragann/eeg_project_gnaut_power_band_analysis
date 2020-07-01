@@ -13,7 +13,7 @@ plt.style.use('seaborn-dark')
 if __name__ == '__main__':
     userDict = {'ryan':'User 1', 'jhony':'User 2','juan':'User 3','jackie':'User 4'}
     #Format data
-    df = pd.read_csv("./Data/window10s_sampleSize120s-round2.csv")
+    df = pd.read_csv("Data/old/window10s_sampleSize120s-round2.csv")
     proportions = df.proportionOfTransfer.unique()
     users = df.User.unique()
 
