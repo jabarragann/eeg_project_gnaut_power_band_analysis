@@ -1,3 +1,4 @@
+import pickle
 import matplotlib.pyplot as plt
 import numpy as np
 from collections import defaultdict
@@ -17,6 +18,15 @@ from pathlib import Path
 import traceback
 import copy
 from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Dense, Activation, Permute, Dropout
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
+from tensorflow.keras.layers import SeparableConv2D, DepthwiseConv2D
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.layers import SpatialDropout2D
+from tensorflow.keras.regularizers import l1_l2
+from tensorflow.keras.layers  import Input, Flatten
+from tensorflow.keras.constraints import max_norm
 
 class Utils:
     @staticmethod
@@ -61,6 +71,15 @@ class DataLoaderModule:
         "PZ", "P4", "P8", "PO3", "PO4", "OZ"]
     POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
 
+    def __init__(self, dataFormat='freq'):
+        """
+        :param dataFormat: either 'freq' (default) for data in frequency format or 'time' for data in the time domain.
+        """
+        self.dataFormat = dataFormat
+
+        if self.dataFormat not in ['freq','time']:
+            raise Exception("dataFormat should be either 'freq' or 'time'")
+
     def series_to_supervised(self, data, labels, n_in=1, n_out=1, dropnan=True):
         n_vars = 1 if type(data) is list else data.shape[1]
         df = pd.DataFrame(data)
@@ -85,7 +104,52 @@ class DataLoaderModule:
         labels = labels[n_in:]
         return agg.values, labels.values
 
-    def getDataSplitBySession(self, datapath, timesteps=None, powerBands = None, eegChannels = None):
+    def getDataSplitBySession(self, datapath, timesteps=None, powerBands=None, eegChannels=None, debug=True):
+        if self.dataFormat == 'time':
+            return self.getDataSplitBySessionTime(datapath, debug)
+        elif self.dataFormat == 'freq':
+            return self.getDataSplitBySessionFreq(datapath, timesteps, powerBands, eegChannels, debug)
+
+    def getDataSplitBySessionTime(self, datapath, debug=True):
+        """
+                Get a dictionary of all the different EEG in time format sessions found in the datapath. A session is defined as all the data
+                that was collected before the person takes of the sensor.
+
+                :param datapath:
+                :param debug:
+                :return:
+                """
+
+        # # Get a list of all the files
+        datapath = Path(datapath)
+
+        # Create container
+        dataContainer = defaultdict(lambda: defaultdict(list))
+
+        # Read all data files and concatenate them into a single dataframe.
+        for f in datapath.rglob("*.pickle"):
+            # Get Session
+            sessId = re.findall("S[0-9]_T[0-9]", str(f.name))[0][-4]
+
+            # Get data frame
+            print(f) if debug else None
+
+            with open(f, 'rb') as fHandler:
+                data = pickle.load(fHandler)
+                assert isinstance(data, dict), "Unpickled data file is not a dict"
+                assert 'X' in data.keys() and 'y' in data.keys(), "Unpickled eeg data not in the right format. Missing 'X' or 'y' key"
+
+            # Append trial to dataset
+            dataContainer[sessId]['X'].append(data['X'])
+            dataContainer[sessId]['y'].append(data['y'])
+
+        for key, value in dataContainer.items():
+            dataContainer[key]['X'] = np.concatenate(dataContainer[key]['X'])
+            dataContainer[key]['y'] = np.concatenate(dataContainer[key]['y'])
+
+        return dataContainer
+
+    def getDataSplitBySessionFreq(self, datapath, timesteps=None, powerBands = None, eegChannels = None, debug = True):
         """
         Get a dictionary of all the different data sessions found in the datapath. A session is defined as all the data
         that was collected before the person takes of the sensor.
@@ -104,32 +168,34 @@ class DataLoaderModule:
         # Create data column names
         columnNames = [x + '-' + y for x, y in product(eegChannels, powerBands)]
 
-        # Get a list of all the files
-        files = os.listdir(datapath)
+        # # Get a list of all the files
+        # files = os.listdir(datapath)
+        datapath = Path(datapath)
 
         # Create container
         dataContainer = defaultdict(lambda: defaultdict(list))
 
         # Read all data files and concatenate them into a single dataframe.
-        for f in files:
-            if f != "empty.py":
-                # Get Session
-                sessId = re.findall("S[0-9]_T[0-9]", f)[0][-4]
+        for f in datapath.rglob("*.txt"):
 
-                # Get data frame
-                print(datapath / f)
-                d1 = pd.read_csv(datapath / f, sep=',', index_col=0)
-                # Get data and labels
-                X, y = d1[columnNames], d1['Label']
-                # Get Number of features
-                features = X.shape[1]
-                timesteps = timesteps
-                # Set data in LSTM format
-                new_X, new_y = self.series_to_supervised(X, y, n_in=(timesteps - 1), n_out=1, dropnan=True)
-                new_X = new_X.reshape((new_X.shape[0], timesteps, features))
-                # Append trial to dataset
-                dataContainer[sessId]['X'].append(new_X)
-                dataContainer[sessId]['y'].append(new_y)
+            # Get Session
+            sessId = re.findall("S[0-9]_T[0-9]", str(f.name))[0][-4]
+
+            # Get data frame
+            print(f) if debug else None
+
+            d1 = pd.read_csv(f, sep=',', index_col=0)
+            # Get data and labels
+            X, y = d1[columnNames], d1['Label']
+            # Get Number of features
+            features = X.shape[1]
+            timesteps = timesteps
+            # Set data in LSTM format
+            new_X, new_y = self.series_to_supervised(X, y, n_in=(timesteps - 1), n_out=1, dropnan=True)
+            new_X = new_X.reshape((new_X.shape[0], timesteps, features))
+            # Append trial to dataset
+            dataContainer[sessId]['X'].append(new_X)
+            dataContainer[sessId]['y'].append(new_y)
 
         for key, value in dataContainer.items():
             dataContainer[key]['X'] = np.concatenate(dataContainer[key]['X'])
@@ -278,11 +344,14 @@ class NetworkFactoryModule:
     def hyperparameterTunning(timesteps, features, lstmLayers, lstmOutputSize,
                               isBidirectional, inputLayerNeurons=64, inputLayerDropout=0.3):
 
-        timesteps = timesteps
-        features = features
+        timesteps = int(timesteps)
+        features = int(features)
+        lstmLayers = int(lstmLayers)
+        lstmOutputSize =int(lstmOutputSize)
+        isBidirectional =int(isBidirectional)
 
         # Input layer
-        networkInput = Input(shape=(timesteps, features))
+        networkInput = Input(shape=(int(timesteps), int(features)))
         dropout1 = Dropout(rate=inputLayerDropout)(networkInput)
 
         # First Hidden layer
@@ -306,7 +375,71 @@ class NetworkFactoryModule:
         model1 = Model(inputs=networkInput, outputs=networkOutput)
         model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
 
-        return model1, 'advanceModel'
+        return model1
+
+    @staticmethod
+    def EEGNet(nb_classes, Chans=32, Samples=128,
+               dropoutRate=0.5, kernLength=int(64 / 2), F1=8,
+               D=2, F2=16, norm_rate=0.25, dropoutType='Dropout'):
+        """ Keras Implementation of EEGNet
+        http://iopscience.iop.org/article/10.1088/1741-2552/aace8c/meta
+
+          nb_classes      : int, number of classes to classify
+          Chans, Samples  : number of channels and time points in the EEG data
+          dropoutRate     : dropout fraction
+          kernLength      : length of temporal convolution in first layer. We found
+                            that setting this to be half the sampling rate worked
+                            well in practice. For the SMR dataset in particular
+                            since the data was high-passed at 4Hz we used a kernel
+                            length of 32.
+          F1, F2          : number of temporal filters (F1) and number of pointwise
+                            filters (F2) to learn. Default: F1 = 8, F2 = F1 * D.
+          D               : number of spatial filters to learn within each temporal
+                            convolution. Default: D = 2
+          dropoutType     : Either SpatialDropout2D or Dropout, passed as a string.
+        """
+        K.set_image_data_format('channels_first')
+
+        if dropoutType == 'SpatialDropout2D':
+            dropoutType = SpatialDropout2D
+        elif dropoutType == 'Dropout':
+            dropoutType = Dropout
+        else:
+            raise ValueError('dropoutType must be one of SpatialDropout2D '
+                             'or Dropout, passed as a string.')
+
+        input1 = Input(shape=(1, Chans, Samples))
+
+        ##################################################################
+        block1 = Conv2D(F1, (1, kernLength), padding='same',
+                        input_shape=(1, Chans, Samples),
+                        use_bias=False)(input1)
+        block1 = BatchNormalization(axis=1)(block1)
+        block1 = DepthwiseConv2D((Chans, 1), use_bias=False,
+                                 depth_multiplier=D,
+                                 depthwise_constraint=max_norm(1.))(block1)
+        block1 = BatchNormalization(axis=1)(block1)
+        block1 = Activation('elu')(block1)
+        block1 = AveragePooling2D((1, 4))(block1)
+        block1 = dropoutType(dropoutRate)(block1)
+
+        block2 = SeparableConv2D(F2, (1, 16),
+                                 use_bias=False, padding='same')(block1)
+        block2 = BatchNormalization(axis=1)(block2)
+        block2 = Activation('elu')(block2)
+        block2 = AveragePooling2D((1, 8))(block2)
+        block2 = dropoutType(dropoutRate)(block2)
+
+        flatten = Flatten(name='flatten')(block2)
+
+        dense = Dense(nb_classes, name='dense',
+                      kernel_constraint=max_norm(norm_rate))(flatten)
+        softmax = Activation('softmax', name='softmax')(dense)
+
+        model = Model(inputs=input1, outputs=softmax)
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+
+        return model, 'EEGnet'
 
 class NetworkTrainingModule:
 
@@ -559,7 +692,7 @@ class CrossValidationRoutines:
             return pd.concat(resultsContainer)
 
     @staticmethod
-    def userCrossValidationMultiUser(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None, powerCoefficients = None):
+    def userCrossValidationMultiUser(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None, powerCoefficients = None, dataFormat='freq'):
         """
          userCrossValidationMultiUser will perform the crossvalidation process of a model. The main difference
         between userCrossValidation is that training data from multiple user will be added to the training and
@@ -571,6 +704,7 @@ class CrossValidationRoutines:
         4)The rest of the sessions of the testing user go to the training set.
 
         Training and validation have data from multiple users.
+        :param dataFormat: should be 'freq' if powerbands and lstm are going to be use for classification. Or 'time' if cnn with time data is going to be use.
         :param powerCoefficients: This parameter could be either None to use all the available power coefficients
          or a list of the coefficients that should be included in the data.
         :param eegChannels: This parameter could be either None to use all the available EEG channels
@@ -583,7 +717,7 @@ class CrossValidationRoutines:
         :return:
         """
 
-        dataLoaderModule = DataLoaderModule()
+        dataLoaderModule = DataLoaderModule(dataFormat=dataFormat)
         trainingModule = NetworkTrainingModule()
         factoryModule = NetworkFactoryModule()
         resultsContainer = []
@@ -648,18 +782,28 @@ class CrossValidationRoutines:
                 testY = to_categorical(testY)
                 valY = to_categorical(valY)
 
-                # Normalize data - with training set parameters
-                globalMean = trainX.mean(axis=(0, 1))
-                globalStd = trainX.std(axis=(0, 1))
+
+                # Train Model- Create LSTM model or CCN model depending on data format.
+                # Normalize data accordingly to the format also
+                if dataFormat == 'freq':
+                    # Normalize data - with training set parameters
+                    globalMean = trainX.mean(axis=(0, 1))
+                    globalStd = trainX.std(axis=(0, 1))
+                    #Create model
+                    model,modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                elif dataFormat == 'time':
+                    # Normalize data - with training set parameters
+                    globalMean = trainX.mean(axis=(0,3)).reshape((1,32,1))
+                    globalStd = trainX.std(axis=(0,3)).reshape((1,32,1))
+                    #Create model
+                    model,modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
 
                 trainX = (trainX - globalMean) / (globalStd + 1e-18)
                 valX = (valX - globalMean) / (globalStd + 1e-18)
                 testX = (testX - globalMean) / (globalStd + 1e-18)
 
-                # Train Model - First round
-                model,modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
                 history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY, testX, testY,
-                                                                                   epochs=700, verbose=0)
+                                                                                   epochs=700, verbose=1)
 
                 evalTrain = model.evaluate(trainX, trainY,verbose=0)[1]
                 evalValidation = model.evaluate(valX, valY, verbose=0)[1]
@@ -760,8 +904,8 @@ class TransferLearningModule:
         print("Global Mean: {:0.4%}".format(sum(allAcc)/len(allAcc)))
 
     @staticmethod
-    def transferCrossValidation(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None, powerCoefficients = None):
-        dataLoaderModule = DataLoaderModule()
+    def transferCrossValidation(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None, powerCoefficients = None,dataFormat='freq'):
+        dataLoaderModule = DataLoaderModule(dataFormat=dataFormat)
         trainingModule = NetworkTrainingModule()
         factoryModule = NetworkFactoryModule()
         resultsContainer = []
@@ -789,15 +933,27 @@ class TransferLearningModule:
         #One hot encode
         trainY = to_categorical(trainY)
         valY = to_categorical(valY)
+
         #Normalizers
-        globalMean = trainX.mean(axis=(0, 1))
-        globalStd = trainX.std(axis=(0, 1))
+        # Train Model- Create LSTM model or CCN model depending on data format.
+        # Normalize data accordingly to the data format
+        # Normalize data - with training set parameters
+        if dataFormat == 'freq':
+            globalMean = trainX.mean(axis=(0, 1))
+            globalStd = trainX.std(axis=(0, 1))
+        elif dataFormat == 'time':
+            globalMean = trainX.mean(axis=(0, 3)).reshape((1, 32, 1))
+            globalStd = trainX.std(axis=(0, 3)).reshape((1, 32, 1))
 
         trainX = (trainX - globalMean) / (globalStd + 1e-18)
         valX = (valX - globalMean) / (globalStd + 1e-18)
 
         # Train Model - First round
-        model, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+        if dataFormat == 'freq':
+            model, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+        elif dataFormat == 'time':
+            model, modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
+
         history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY,
                                                                            epochs=700, verbose=0)
 
@@ -847,7 +1003,11 @@ class TransferLearningModule:
                     trainPortionY = transferTrainY[:portion,:]
 
                     #Training stage two - Transfer
-                    transferModel, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                    if dataFormat == 'freq':
+                        transferModel, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                    elif dataFormat == 'time':
+                        transferModel, modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
+
                     transferModel.set_weights(bestWeightsFirstRound)
                     transferHistory, transferModel, earlyStopping = trainingModule.trainModelEarlyStop(transferModel,
                                                                                                trainPortionX,
@@ -896,6 +1056,6 @@ if __name__ == '__main__':
 
     fact = NetworkFactoryModule()
 
-    network, name= fact.hyperparameterTunning(8,100,3,8,True)
+    network, name= fact.hyperparameterTunning(8,100,3,8,1.0)
 
     network.summary()

@@ -19,8 +19,8 @@ if __name__ == "__main__":
 
     # srcPath = "C:/Users/asus/OneDrive - purdue.edu/RealtimeProject/Data/GNautilusInvertedTask_Pyprep"
     # dstPath = "C:/Users/asus/OneDrive - purdue.edu/RealtimeProject/Data/GNautilusInvertedTask_Pyprep_edf"
-    srcPath = "./data2/src"
-    dstPath = "./data2/dst"
+    srcPath = "./data5/src"
+    dstPath = "./data5/dst"
 
     summaryFile = open("./summary.txt",'w')
 

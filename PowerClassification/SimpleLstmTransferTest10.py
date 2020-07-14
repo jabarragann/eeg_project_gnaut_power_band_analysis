@@ -28,7 +28,7 @@ if __name__ == '__main__':
     POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
     LSTM_SAMPLE_SIZE = [120,140]
     WINDOW_SIZE = [10,20]
-    RESULTS_ROOT = Path('./results/EegResults/results_transfer10/') / 'aa3_pyprep/'
+    RESULTS_ROOT = Path('./results/EegResults/results_transfer10/') / 'aa4_pyprep_test/'
 
     transferModule = TransferLearningModule()
     utilsModule = Utils()

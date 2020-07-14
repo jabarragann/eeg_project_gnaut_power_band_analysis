@@ -18,24 +18,25 @@ from itertools import product
 import re
 import yasa
 
+#['low', 'Delta','Theta','Alpha','Beta', 'Gamma']
 #Channels PO7 and PO8 are not included
 EEG_channels = [  "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
                   "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
                   "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
                   "PZ","P4","P8","PO7","PO3","PO4","PO8","OZ"]
 
-Power_coefficients = ['Low','Delta','Theta','Alpha','Beta', 'Gamma']
+Power_coefficients = ['Delta','Theta','Alpha','Beta', 'Gamma']
 
 newColumnNames = [x+'-'+y for x,y in product(EEG_channels, Power_coefficients)] + ['Label']
 print(newColumnNames)
 
 #Global variables
-# users = ['juan','jackie','ryan','jhony']
-users = ['karuna', 'santy']
+users = ['juan','jackie','ryan','jhony']
+# users = ['karuna', 'santy']
 windowSize = [10, 20, 30]
 dataPath = Path('./data/')
 rawDataPath = Path('./data/raw_data_pyprep')
-dstPath = dataPath / 'DifferentWindowSizeData_pyprep'
+dstPath = dataPath / 'DifferentWindowSizeData_pyprep_no_low_band'
 sf = 250
 
 
@@ -56,8 +57,9 @@ def calculatePowerBand(windowArray, df ):
             # (0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),(12, 30, 'Beta'), (30, 50, 'Gamma')
             # Calculate bandpower
             bd = yasa.bandpower(data2, sf=sf, ch_names=EEG_channels, win_sec=4,
-                                bands=[(0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),
+                                bands=[(0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),
                                        (12, 30, 'Beta'), (30, 50, 'Gamma')])
+
             # Reshape coefficients into a single row vector
             bd = bd[Power_coefficients].values.reshape(1, -1)
 

@@ -64,10 +64,11 @@ if __name__ == '__main__':
                                   "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
                                   "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
                                   "PZ","P4","P8","PO7","PO3","PO4","PO8","OZ"],
-              'POWER_COEFFICIENTS': ['Low', 'Delta', 'Theta', 'Alpha', 'Beta'],
-              'LSTM_SAMPLE_SIZE': [20,40,60,80,100,120,140],
-              'WINDOW_SIZE': [10,20],
-              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa4_pyprep_lstm_20-140_W10-20/'
+              'POWER_COEFFICIENTS': ['Delta', 'Theta', 'Alpha', 'Beta'],
+              'LSTM_SAMPLE_SIZE': [140],
+              'WINDOW_SIZE': [20],
+              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa5_pyprep/',
+              'AIM':"The aim of the experiment is to evaluate the performance of the classifiers without the Low power band."
               }
     # Read command line arguments if any
     paramsDict = readCommandLineArg(paramsDict)
@@ -94,6 +95,9 @@ if __name__ == '__main__':
             if not resultsPath.exists():
                 print('create ', resultsPath)
                 Path.mkdir(resultsPath,parents=True)
+
+            with open(resultsPath/'readme.md','w') as f:
+                f.write(params.AIM + '\n')
 
             results = crossValidationModule.userCrossValidationMultiUser(lstmSteps, dataPath,resultsPath,
                                                                          user,params.ALL_USERS,eegChannels=params.EEG_CHANNELS,
