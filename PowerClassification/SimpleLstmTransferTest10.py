@@ -21,11 +21,11 @@ POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
 if __name__ == '__main__':
     USERS = ['ryan','juan', 'jackie','jhony', 'karuna','santy']
     #EEG_CHANNELS = ['FZ', 'F7', 'F3', 'F4', 'F8']
-    EEG_CHANNELS = ["FP1", "FP2", "F7", "F3", "FZ", "F4",
+    EEG_CHANNELS = ["FP1", "FP2",  "AF3", "AF4","F7", "F3", "FZ", "F4",
                      "F8", "FC5", "FC1", "FC2", "FC6", "T7", "C3", "CZ",
                      "C4", "T8", "CP5", "CP1", "CP2", "CP6", "P7", "P3",
                      "PZ", "P4", "P8", "PO7", "PO3", "PO4", "PO8", "OZ"]
-    POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
+    POWER_COEFFICIENTS = ['Delta', 'Theta', 'Alpha', 'Beta']
     LSTM_SAMPLE_SIZE = [120,140]
     WINDOW_SIZE = [10,20]
     RESULTS_ROOT = Path('./results/EegResults/results_transfer10/') / 'aa4_pyprep_test/'

@@ -377,6 +377,44 @@ class NetworkFactoryModule:
 
         return model1
 
+    # Timesteps 7.0, features 128.0
+    @staticmethod
+    def bestLstmModel(timesteps, features, lstmLayers=2, lstmOutputSize=4.0,
+                      isBidirectional=1.0, inputLayerNeurons=64, inputLayerDropout=0.3):
+
+        timesteps = int(timesteps)
+        features = int(features)
+        lstmLayers = int(lstmLayers)
+        lstmOutputSize =int(lstmOutputSize)
+        isBidirectional =int(isBidirectional)
+
+        # Input layer
+        networkInput = Input(shape=(int(timesteps), int(features)))
+        dropout1 = Dropout(rate=inputLayerDropout)(networkInput)
+
+        # First Hidden layer
+        hidden1 = Dense(inputLayerNeurons, activation='relu')(dropout1)
+        dropout2 = Dropout(rate=0.5)(hidden1)
+        batchNorm1 = BatchNormalization()(dropout2)
+
+        out = batchNorm1
+        for i in range(1, lstmLayers+1):
+            retSeq = False if i == lstmLayers else True
+            lstmLayer = LSTM(lstmOutputSize, stateful=False, return_sequences=retSeq,
+                             dropout=0.5, kernel_regularizer=regularizers.l2(0.05))
+            if isBidirectional:
+                out = Bidirectional(lstmLayer, merge_mode='concat')(out)
+            else:
+                out = lstmLayer(out)
+
+        hidden3 = Dense(2, activation='linear')(out)
+        networkOutput = Softmax()(hidden3)
+
+        model1 = Model(inputs=networkInput, outputs=networkOutput)
+        model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+
+        return model1, 'bestModel'
+
     @staticmethod
     def EEGNet(nb_classes, Chans=32, Samples=128,
                dropoutRate=0.5, kernLength=int(64 / 2), F1=8,
@@ -662,7 +700,7 @@ class CrossValidationRoutines:
                     testX = (testX - X_mean) / (X_std + 1e-18)
 
                     # Train Model
-                    model, modelName = factoryModule.createAdvanceLstmModel(lstmSteps, trainX.shape[2])
+                    model, modelName = factoryModule.bestLstmModel(lstmSteps, trainX.shape[2])
                     history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY,
                                                                                        valX, valY, testX, testY, epochs=400,verbose=0)
 
@@ -790,7 +828,7 @@ class CrossValidationRoutines:
                     globalMean = trainX.mean(axis=(0, 1))
                     globalStd = trainX.std(axis=(0, 1))
                     #Create model
-                    model,modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                    model,modelName = factoryModule.bestLstmModel(*(trainX.shape[1], trainX.shape[2]))
                 elif dataFormat == 'time':
                     # Normalize data - with training set parameters
                     globalMean = trainX.mean(axis=(0,3)).reshape((1,32,1))
@@ -878,7 +916,7 @@ class TransferLearningModule:
         valX = (valX - globalMean) / (globalStd + 1e-18)
 
         # Train Model - First round
-        model, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+        model, modelName = factoryModule.bestLstmModel(*(trainX.shape[1], trainX.shape[2]))
         history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY,
                                                                            epochs=700, verbose=0)
 
@@ -950,7 +988,7 @@ class TransferLearningModule:
 
         # Train Model - First round
         if dataFormat == 'freq':
-            model, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+            model, modelName = factoryModule.bestLstmModel(*(trainX.shape[1], trainX.shape[2]))
         elif dataFormat == 'time':
             model, modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
 
@@ -1004,7 +1042,7 @@ class TransferLearningModule:
 
                     #Training stage two - Transfer
                     if dataFormat == 'freq':
-                        transferModel, modelName = factoryModule.createAdvanceLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                        transferModel, modelName = factoryModule.bestLstmModel(*(trainX.shape[1], trainX.shape[2]))
                     elif dataFormat == 'time':
                         transferModel, modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
 

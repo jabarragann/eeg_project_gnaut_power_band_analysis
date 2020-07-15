@@ -60,13 +60,13 @@ if __name__ == '__main__':
     #Initial parameters
     paramsDict = {'TESTED_USERS': ['karuna','santy','juan', 'jackie', 'ryan', 'jhony'],
               'ALL_USERS': ['juan', 'jackie', 'ryan', 'jhony','karuna','santy'],
-              'EEG_CHANNELS': [   "FP1","FP2","F7","F3","FZ","F4",
+              'EEG_CHANNELS': [   "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
                                   "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
                                   "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
                                   "PZ","P4","P8","PO7","PO3","PO4","PO8","OZ"],
               'POWER_COEFFICIENTS': ['Delta', 'Theta', 'Alpha', 'Beta'],
-              'LSTM_SAMPLE_SIZE': [140],
-              'WINDOW_SIZE': [20],
+              'LSTM_SAMPLE_SIZE': [5,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160],
+              'WINDOW_SIZE': [10, 20, 30],
               'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa5_pyprep/',
               'AIM':"The aim of the experiment is to evaluate the performance of the classifiers without the Low power band."
               }

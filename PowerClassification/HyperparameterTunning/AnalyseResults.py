@@ -45,6 +45,13 @@ if __name__ == "__main__":
     else:
         raise Exception
 
+    print("Timesteps {}, features {}, lstmLayers {}, lstmOutput {}, isBidirectional {}, WindowSize {}".format(
+        bestModelParams['timesteps'],
+        bestModelParams['features'],
+        bestModelParams['lstmLayers'],
+        bestModelParams['lstmOutputSize'],
+        bestModelParams['isBidirectional'],
+        bestModelParams['WindowSize']))
 
     # Train model
     history, model, earlyStopCallback = trainer.trainModelEarlyStop(model, trainX, trainY, valX, valY,

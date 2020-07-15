@@ -81,4 +81,5 @@ for idx in range(featureCombinations.shape[0]):
     #Save results
     featureCombinations.to_csv('./results.csv', index=None)
 
+featureCombinations = featureCombinations.sort_values(by ='mean',ascending=False)
 featureCombinations.to_csv('./results.csv',index=None)
