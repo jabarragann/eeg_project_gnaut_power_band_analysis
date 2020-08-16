@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 ##Software is removing last epoch of data
 ##Solution create events manually
+mne.set_log_level("WARNING")
 
 def renameChannels(chName):
     if 'Z' in chName:

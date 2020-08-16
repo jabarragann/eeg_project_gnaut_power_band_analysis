@@ -17,10 +17,10 @@ mne.set_log_level("WARNING")
 
 if __name__ == "__main__":
 
-    # srcPath = "C:/Users/asus/OneDrive - purdue.edu/RealtimeProject/Data/GNautilusInvertedTask_Pyprep"
-    # dstPath = "C:/Users/asus/OneDrive - purdue.edu/RealtimeProject/Data/GNautilusInvertedTask_Pyprep_edf"
-    srcPath = "./data5/src"
-    dstPath = "./data5/dst"
+    srcPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U01\\S02\\Sensor-Data\\Process-Eeg\\txt"
+    dstPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U01\\S02\\Sensor-Data\\Process-Eeg\\edf"
+    # srcPath = "./data5/src"
+    # dstPath = "./data5/dst"
 
     summaryFile = open("./summary.txt",'w')
 
@@ -32,10 +32,10 @@ if __name__ == "__main__":
 
         p2 = dst / file.parent.name
         user = file.parent.name
-        destinationFile = dst / file.parent.name / file.with_suffix(".edf").name
+        destinationFile = dst / file.with_suffix(".edf").name
 
-        if not p2.exists():
-            p2.mkdir(parents=True)
+        # if not p2.exists():
+        #     p2.mkdir(parents=True)
 
         sfreq = 250
         df = pd.read_csv(file)
