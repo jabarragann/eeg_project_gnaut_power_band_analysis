@@ -25,7 +25,7 @@ EEG_channels = [  "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
                   "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
                   "PZ","P4","P8","PO7","PO3","PO4","PO8","OZ"]
 
-Power_coefficients = ['Delta','Theta','Alpha','Beta', 'Gamma']
+Power_coefficients = ['Delta','Theta','Alpha','Beta']
 
 newColumnNames = [x+'-'+y for x,y in product(EEG_channels, Power_coefficients)] + ['Label']
 print(newColumnNames)

@@ -79,10 +79,10 @@ if __name__ == '__main__':
                 nperE = sf * w1 #Number of samples per Epoch
 
                 eTime = int(w1 / 2 * sf)
-                events_array = [[eTime,0,1]]
+                events_array = []
                 while eTime < totalPoints:
-                    eTime += sf*w1
-                    events_array.append([eTime,0,1])
+                    events_array.append([eTime, 0, 1])
+                    eTime += sf * w1
                 events_array = np.array(events_array)
 
                 epochs = mne.Epochs(raw, events_array, tmin=-(w1/2-0.02*w1), tmax=(w1/2-0.02*w1))
