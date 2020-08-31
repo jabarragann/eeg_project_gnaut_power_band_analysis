@@ -10,7 +10,8 @@ import seaborn as sns
 if __name__ =='__main__':
     #'/temp/f-c-ChannelsExp-WithNoICA1'
     #Iterate through all the results files
-    resultsDir = 'aa4_pyprep_lstm_20-140_W10-20/'
+    # resultsDir = 'aa4_pyprep_lstm_20-140_W10-20/'
+    resultsDir = 'aa11a_deidentified_pyprep_reduced_complete_analysis'
     path = Path('./').resolve().parent / 'results' / 'EegResults' /'results_transfer9' / resultsDir
     dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
 
@@ -43,7 +44,7 @@ if __name__ =='__main__':
     summaryFrame['Windows Size2'] = summaryFrame['Window Size'].astype(str)
     f, ax = plt.subplots(1,1,figsize=(9, 6))
 
-    for w1 in [10,20]:
+    for w1 in [10]:
         tempFrame = summaryFrame.loc[summaryFrame['Window Size'] == w1]
         ax.plot(tempFrame["Lstm Sample Size"], tempFrame['meanAcc'],label=str(w1)+" sec", marker="*")
     ax.set_ylabel("Average prediction accuracy")

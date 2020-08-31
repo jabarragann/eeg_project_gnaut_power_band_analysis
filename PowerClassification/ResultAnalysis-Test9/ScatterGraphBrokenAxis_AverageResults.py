@@ -35,7 +35,7 @@ def createBrokenAxisPlot():
 if __name__ =='__main__':
     #'/temp/f-c-ChannelsExp-WithNoICA1'
     #Iterate through all the results files
-    resultsDir = 'aa4_pyprep_lstm_20-140_W10-20/'
+    resultsDir = 'aa11a_deidentified_pyprep_reduced_complete_analysis//'
     path = Path('./').resolve().parent / 'results' / 'EegResults' /'results_transfer9' / resultsDir
     dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
 

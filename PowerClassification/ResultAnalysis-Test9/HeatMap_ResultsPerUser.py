@@ -6,17 +6,19 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 sns.set()
 
-userNameMapping  = {'jackie':'Subject 1','ryan':'Subject 2', 'juan':'Subject 3',
-                    'jhony':'Subject 4','karuna':'Subject 5','santy':'Subject 6'}
+userList  = ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08']
 
 if __name__ =='__main__':
 
-    f, axes = plt.subplots(3, 2, sharex='col', sharey='row')
+    f, axes = plt.subplots(2, 4, sharex='col', sharey='row')
     axes = axes.reshape(-1)
 
-    for user, ax in zip(userNameMapping.keys(),axes):
+    plotConfig = {'top':0.88, 'bottom':0.08, 'left':0.11,'right':0.9,'hspace':0.5,'wspace':0.2}
+    plt.subplots_adjust(**plotConfig)
+
+    for user, ax in zip(userList,axes):
         #Iterate through all the results files
-        resultsDir = 'aa3_pyprep/'
+        resultsDir = 'aa11a_deidentified_pyprep_reduced_complete_analysis/'
         path = Path('./').resolve().parent / 'results' / 'EegResults' /'results_transfer9' / resultsDir
         dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
         for file in path.glob('*.csv'):
@@ -41,7 +43,7 @@ if __name__ =='__main__':
 
 
         # ax.set_title("{:}-{:}".format(resultsDir,user))
-        ax.set_title("{:}".format(userNameMapping[user]))
+        ax.set_title("{:}".format(user))
         sns.heatmap(summaryFrame, annot=True, fmt=".3", linewidths=.5, ax=ax)
 
     plt.show()
