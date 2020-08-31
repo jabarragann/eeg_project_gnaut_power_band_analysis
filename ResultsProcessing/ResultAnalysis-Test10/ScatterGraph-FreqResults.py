@@ -11,9 +11,9 @@ import numpy as np
 plt.style.use('seaborn-dark')
 
 if __name__ == '__main__':
-    userDict = {'ryan':'User 1', 'jhony':'User 2','juan':'User 3','jackie':'User 4'}
+    # userDict = {'ryan':'User 1', 'jhony':'User 2','juan':'User 3','jackie':'User 4'}
     #Format data
-    df = pd.read_csv("Data/old/window10s_sampleSize120s-round2.csv")
+    df = pd.read_csv("./Data/window10s_sampleSize110s.csv")
     proportions = df.proportionOfTransfer.unique()
     users = df.User.unique()
 
@@ -37,16 +37,16 @@ if __name__ == '__main__':
 
     #Create Individual graphs for each user
     nrow = 2
-    ncol = 2
+    ncol = 4
     fig, axes = plt.subplots(nrows=nrow, ncols=ncol, sharex="col", sharey='row')
     axes = axes.reshape(-1)
-    colors = ['blue','green','red','cyan','magenta','black']
+    colors = ['blue','green','red','cyan','magenta','black','yellow','orange']
 
     fig.text(0.5, 0.04, 'Percentage of test user data', ha='center', fontsize=12)
     fig.text(0.04, 0.5, 'Classification accuracy', va='center', rotation='vertical', fontsize=12)
 
     for idx, u in enumerate(users):
-        axes[idx].set_title(userDict[u])
+        axes[idx].set_title(u)
         axes[idx].set_ylim((0.5,1))
         axes[idx].grid()
 
