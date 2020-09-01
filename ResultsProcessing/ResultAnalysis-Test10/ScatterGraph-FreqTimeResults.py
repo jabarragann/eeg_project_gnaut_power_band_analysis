@@ -6,13 +6,11 @@ into the model.
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 
 
 plt.style.use('seaborn-dark')
-
-userNameMapping  = {'jackie':'Subject 1','ryan':'Subject 2', 'juan':'Subject 3',
-                    'jhony':'Subject 4','karuna':'Subject 5','santy':'Subject 6'}
-
+USERS = ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08']
 
 def formatDataForGraph(path):
     # Format data
@@ -38,38 +36,43 @@ def formatDataForGraph(path):
     return newFrame
 if __name__ == '__main__':
 
-    timeData = formatDataForGraph("./Data/window20s_sampleSize140s_time.csv")
-    freqData = formatDataForGraph("./Data/window20s_sampleSize140s_freq.csv")
+    #Load results data
+    timePath = Path('C:\\Users\\asus\\PycharmProjects\\eeg_project_gnaut_power_band_analysis\\TimeClassification\\results\\results_transfer10\\aa11_pyprep\\window10s_sampleSize140s.csv')
+    freqPath = Path(r'C:\Users\asus\PycharmProjects\eeg_project_gnaut_power_band_analysis\PowerClassification\results\EegResults\results_transfer10\aa11_pyprep\window10s_sampleSize110s.csv')
+    assert timePath.exists(), "Make sure time path is correctly set"
+    assert freqPath.exists(), "Make sure freq path are correctly set"
+    timeData = formatDataForGraph(timePath)
+    freqData = formatDataForGraph(freqPath)
 
-    newFrame = timeData
+    #Plot individual user results
+    framesDict = {'Time domain data results': timeData, 'Frequency domain models results': freqData}
+    for label, newFrame in framesDict.items():
+        #Create Individual graphs for each user
+        nrow = 2
+        ncol = 4
+        fig, axes = plt.subplots(nrows=nrow, ncols=ncol, sharex="col")
+        fig.suptitle(label)
+        axes = axes.reshape(-1)
+        colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'black', 'yellow', 'orange']
 
-    #Create Individual graphs for each user
-    nrow = 3
-    ncol = 2
-    fig, axes = plt.subplots(nrows=nrow, ncols=ncol, sharex="col")
-    axes = axes.reshape(-1)
-    colors = ['blue','green','red','cyan','magenta','black']
+        for idx, u in enumerate(USERS):
+            axes[idx].set_title(u)
+            axes[idx].set_ylim((0.5,1))
+            axes[idx].grid()
 
-    for idx, u in enumerate(userNameMapping.keys()):
-        axes[idx].set_title(userNameMapping[u])
-        axes[idx].set_ylim((0.5,1))
-        axes[idx].grid()
+            #Get data
+            temp = newFrame.loc[newFrame['User'] == u]
+            prop = temp.columns[2:]
+            temp = temp[prop].values.astype(np.float)
+            means = temp.mean(axis=0)
+            std = temp.std(axis=0)
+            x = list(map(lambda l: float(l), prop))
 
-        #Get data
-        temp = newFrame.loc[newFrame['User'] == u]
-        prop = temp.columns[2:]
-        temp = temp[prop].values.astype(np.float)
-        means = temp.mean(axis=0)
-        std = temp.std(axis=0)
-        x = list(map(lambda l: float(l), prop))
-
-
-        #Plot data
-        # axes[idx].errorbar(x, means, yerr=std, fmt='o', linestyle='-', ecolor='black', capsize=2,capthick=2,
-        #                    alpha=0.5,color=colors[idx])
-        axes[idx].errorbar(x, means, yerr=std, fmt='o', linestyle='-', ecolor='black', capsize=2, capthick=2,
-                           alpha=0.5, color=colors[idx])
-
+            #Plot data
+            # axes[idx].errorbar(x, means, yerr=std, fmt='o', linestyle='-', ecolor='black', capsize=2,capthick=2,
+            #                    alpha=0.5,color=colors[idx])
+            axes[idx].errorbar(x, means, yerr=std, fmt='o', linestyle='-', ecolor='black', capsize=2, capthick=2,
+                               alpha=0.5, color=colors[idx])
 
     #Create summary graph of all users
     fig2, ax = plt.subplots(1,1)
@@ -77,6 +80,7 @@ if __name__ == '__main__':
     ax.set_ylim((0.5,1))
     ax.grid()
 
+    errorColor = ['black','gray']
     for idx, (newFrame, label) in  enumerate([(freqData,'Bandpower model'), (timeData,'Time domain model')]):
         #Create summary statistics
         prop = newFrame.columns[2:]
@@ -84,14 +88,14 @@ if __name__ == '__main__':
         means = temp.mean(axis=0)
         std = temp.std(axis=0)
         x = np.array(list(map(lambda l: float(l), prop)))
-        ax.errorbar(x+0.01*idx, means, fmt='o', linestyle='-', ecolor='black', capsize=2,capthick=2,
-                     alpha=0.5, label=label, color=colors[idx])
+        ax.errorbar((x+0.01*idx)*100, means,yerr=std, fmt='o', linestyle='-', ecolor=errorColor[idx], capsize=2,capthick=2,
+                     alpha=0.6, label=label, color=colors[idx])
 
         # ax.errorbar(x, means, yerr=std, fmt='o', linestyle='-', ecolor='black', capsize=2, capthick=2,
         #             alpha=0.5, color=colors[idx])
-        ax.set_xticks(x)
-        ax.set_xlabel("Percentage of calibration data of new user")
-        ax.set_ylabel("Prediction Accuracy")
+        ax.set_xticks(x*100)
+        ax.set_xlabel("% of calibration data of new user")
+        ax.set_ylabel("Average Prediction Accuracy")
 
     ax.legend()
     plt.show()
