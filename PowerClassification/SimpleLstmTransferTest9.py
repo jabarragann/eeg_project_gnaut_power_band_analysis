@@ -55,20 +55,25 @@ def readCommandLineArg(params):
 
 #['FZ', 'F7', 'F3', 'F4', 'F8'],
 #['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
-
+# 'EEG_CHANNELS': ["FP1", "FP2", "AF3", "AF4", "F7", "F3", "FZ", "F4",
+#                  "F8", "FC5", "FC1", "FC2", "FC6", "T7", "C3", "CZ",
+#                  "C4", "T8", "CP5", "CP1", "CP2", "CP6", "P7", "P3",
+#                  "PZ", "P4", "P8", "PO7", "PO3", "PO4", "PO8", "OZ"]
+#'UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08'
 if __name__ == '__main__':
     #Initial parameters
-    paramsDict = {'TESTED_USERS': ['UI01','UI02','UI03','UI04','UI05','UI06'],
-              'ALL_USERS': ['UI01','UI02','UI03','UI04','UI05','UI06'],
+    paramsDict = {'TESTED_USERS': ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08'],
+              'ALL_USERS': ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08'],
               'EEG_CHANNELS': [   "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
                                   "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
                                   "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
-                                  "PZ","P4","P8","PO7","PO3","PO4","PO8","OZ"],
+                                  "PZ","P4","P8","PO3","PO4","OZ"], #PO8 and PO7 removed
               'POWER_COEFFICIENTS': ['Delta', 'Theta', 'Alpha', 'Beta'],
-              'LSTM_SAMPLE_SIZE': [80,160],
-              'WINDOW_SIZE': [10, 20],
-              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa6_deidentified_pyprep/',
-              'AIM':"The the performance of the deidentifed data. The results should be similiar to previous attempts."
+              'LSTM_SAMPLE_SIZE': [11,25,50,75,100,125,150,175],
+              'WINDOW_SIZE': [2,10,20,30],
+              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa13a_deidentified_pyprep/',
+              'SOURCE_PATH': './data/de-identified-pyprep-dataset-reduced-critically/',
+              'AIM':"Full "
               }
     # Read command line arguments if any
     paramsDict = readCommandLineArg(paramsDict)
@@ -85,11 +90,15 @@ if __name__ == '__main__':
     #Main Script
     for lstmSampleSize,windowSize in itertools.product(params.LSTM_SAMPLE_SIZE, params.WINDOW_SIZE):
 
+        if windowSize > lstmSampleSize:
+            print("skip window size {:} and sample size {:}".format(windowSize, lstmSampleSize))
+            continue
+
         lstmSteps = int(lstmSampleSize/windowSize)
         completeResults = []
 
         for user in params.TESTED_USERS:
-            dataPath = Path('./data/de-identified-pyprep-dataset/{:02d}s/'.format(windowSize))
+            dataPath = Path(params.SOURCE_PATH)/'{:02d}s/'.format(windowSize)
             resultsPath = params.RESULTS_ROOT /'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():
