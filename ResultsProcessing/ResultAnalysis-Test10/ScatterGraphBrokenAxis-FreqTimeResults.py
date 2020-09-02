@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from brokenaxes import brokenaxes
 
-plt.style.use('seaborn-dark')
+# plt.style.use('seaborn-dark')
 
 userNameMapping  = {'jackie':'Subject 1','ryan':'Subject 2', 'juan':'Subject 3',
                     'jhony' :'Subject 4','karuna':'Subject 5','santy':'Subject 6'}
@@ -116,9 +116,9 @@ if __name__ == '__main__':
     #Title
     ax1.set_title("% of calibration data vs accuracy")
     #Common Y label
-    fig2.text(0.03, 0.5, 'Accuracy', va='center', rotation='vertical')
+    fig2.text(0.03, 0.5, 'Average Accuracy', va='center', rotation='vertical')
     #X label
-    ax2.set_xlabel("% of calibration data of new user")
+    ax2.set_xlabel("% of calibration data")
     #Grid
     ax1.grid(); ax2.grid()
 
@@ -134,5 +134,8 @@ if __name__ == '__main__':
         ax2.errorbar((x+0.01*idx)*100, means, label=label, color=colors[idx], ecolor=errorColor, **plotArg)
         ax2.set_xticks(x*100)
 
-    ax2.legend() #Activate Legend
+    ax1.set_facecolor('0.9');ax2.set_facecolor('0.9')
+    ax2.legend( fancybox=True, shadow=True, )
+
+    # ax2.legend() #Activate Legend
     plt.show()

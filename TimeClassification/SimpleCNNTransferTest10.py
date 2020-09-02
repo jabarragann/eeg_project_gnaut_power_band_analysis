@@ -16,19 +16,22 @@ EEG_CHANNELS = [
         "C4", "T8", "CP5", "CP1", "CP2", "CP6", "P7", "P3",
         "PZ", "P4", "P8", "PO3", "PO4", "OZ"]
 POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
+
+['ryan','juan', 'jackie','jhony', 'karuna','santy']
 '''
 
 if __name__ == '__main__':
-    USERS = ['ryan','juan', 'jackie','jhony', 'karuna','santy']
+    USERS = ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08']
     #EEG_CHANNELS = ['FZ', 'F7', 'F3', 'F4', 'F8']
     EEG_CHANNELS = ["FP1", "FP2", "F7", "F3", "FZ", "F4",
                      "F8", "FC5", "FC1", "FC2", "FC6", "T7", "C3", "CZ",
                      "C4", "T8", "CP5", "CP1", "CP2", "CP6", "P7", "P3",
-                     "PZ", "P4", "P8", "PO7", "PO3", "PO4", "PO8", "OZ"]
+                     "PZ", "P4", "P8", "PO3", "PO4", "OZ"]
     POWER_COEFFICIENTS = ['Low', 'Delta', 'Theta', 'Alpha', 'Beta', 'Gamma']
     LSTM_SAMPLE_SIZE = [140]
-    WINDOW_SIZE = [20]
-    RESULTS_ROOT = Path('./results/results_transfer10/') / 'aa1_pyprep/'
+    WINDOW_SIZE = [10]
+    RESULTS_ROOT = Path('./results/results_transfer10/') / 'aa11_pyprep/'
+    rootPath = Path('./data/de-identified-pyprep-dataset-reduced/')
 
     transferModule = TransferLearningModule()
     utilsModule = Utils()
@@ -47,7 +50,7 @@ if __name__ == '__main__':
 
 
         for user in USERS:
-            dataPath = Path('./data/DifferentWindowSizeData_pyprep/{:02d}s/'.format(windowSize))
+            dataPath = rootPath / '{:02d}s/'.format(windowSize)
             resultsPath = RESULTS_ROOT / 'window{:02d}s_sampleSize{:02d}s'.format(windowSize,lstmSampleSize)
 
             if not resultsPath.exists():

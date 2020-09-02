@@ -24,12 +24,14 @@ import pickle
 EEG_channels = [  "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
                   "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
                   "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
-                  "PZ","P4","P8","PO7","PO3","PO4","PO8","OZ"]
+                  "PZ","P4","P8","PO3","PO4","OZ"]
 
 
 #Global variables
-users = ['juan','jackie','ryan','jhony','karuna', 'santy']
-# users = ['karuna']
+# users = ['juan','jackie','ryan','jhony','karuna', 'santy']
+users = ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08']
+
+
 epochSize = [10,20,30]
 dataPath = Path('./data/')
 rawDataPath = Path('./../PowerClassification/data/raw_data_pyprep')
