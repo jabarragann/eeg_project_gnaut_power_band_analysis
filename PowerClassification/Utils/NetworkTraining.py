@@ -377,6 +377,43 @@ class NetworkFactoryModule:
 
         return model1
 
+    @staticmethod
+    def experimentingWithLowerDropout(timesteps, features, lstmLayers, lstmOutputSize,
+                              isBidirectional, inputLayerNeurons=64, inputLayerDropout=0.2):
+
+        timesteps = int(timesteps)
+        features = int(features)
+        lstmLayers = int(lstmLayers)
+        lstmOutputSize = int(lstmOutputSize)
+        isBidirectional = int(isBidirectional)
+
+        # Input layer
+        networkInput = Input(shape=(int(timesteps), int(features)))
+        dropout1 = Dropout(rate=inputLayerDropout)(networkInput)
+
+        # First Hidden layer
+        hidden1 = Dense(inputLayerNeurons, activation='relu')(dropout1)
+        dropout2 = Dropout(rate=0.3)(hidden1)
+        batchNorm1 = BatchNormalization()(dropout2)
+
+        out = batchNorm1
+        for i in range(1, lstmLayers + 1):
+            retSeq = False if i == lstmLayers else True
+            lstmLayer = LSTM(lstmOutputSize, stateful=False, return_sequences=retSeq,
+                             dropout=0.3, kernel_regularizer=regularizers.l2(0.05))
+            if isBidirectional:
+                out = Bidirectional(lstmLayer, merge_mode='concat')(out)
+            else:
+                out = lstmLayer(out)
+
+        hidden3 = Dense(2, activation='linear')(out)
+        networkOutput = Softmax()(hidden3)
+
+        model1 = Model(inputs=networkInput, outputs=networkOutput)
+        model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
+
+        return model1
+
     # Timesteps 7.0, features 128.0
     @staticmethod
     def bestLstmModel(timesteps, features, lstmLayers=2, lstmOutputSize=4.0,
@@ -802,9 +839,10 @@ class CrossValidationRoutines:
                 valY.append(testUserContainer[validationSession]['y'])
 
                 # Add the remaining sessions to the training set
-                for j in availableSessions:
-                    trainX.append(testUserContainer[j]['X'])
-                    trainY.append(testUserContainer[j]['y'])
+                if len(availableSessions)> 0:
+                    for j in availableSessions:
+                        trainX.append(testUserContainer[j]['X'])
+                        trainY.append(testUserContainer[j]['y'])
 
                 # Concatenate all sessions for validation and training
                 trainX = np.concatenate(trainX)
@@ -1086,8 +1124,157 @@ class TransferLearningModule:
         finally:
             return pd.concat(resultsContainer)
 
-    def transferLearningAcrossUsers(self):
-        pass
+
+    ##Testing strict transfer --> validation dataset is also reduced##
+    @staticmethod
+    def experimentalTransferCrossValidation(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None, powerCoefficients = None,dataFormat='freq'):
+        dataLoaderModule = DataLoaderModule(dataFormat=dataFormat)
+        trainingModule = NetworkTrainingModule()
+        factoryModule = NetworkFactoryModule()
+        resultsContainer = []
+
+        testUserContainer = dataLoaderModule.getDataSplitBySession(dataPath / testUser, timesteps=lstmSteps,
+                                                                   eegChannels=eegChannels,
+                                                                   powerBands=powerCoefficients)
+
+        # Initially remove testing user from training and create train set without him
+        trainingUsers = copy.copy(listOfUsers)
+        trainingUsers.remove(testUser)
+
+        # Load train and validation sets
+        r1 = dataLoaderModule.createTrainAndValFromTrainUsers(trainingUsers, dataPath=dataPath,
+                                                              timesteps=lstmSteps,
+                                                              eegChannels=eegChannels,
+                                                              powerBands=powerCoefficients)
+        trainX, trainY, valX, valY, logger = r1
+
+        # Concatenate all sessions for validation and training
+        trainX = np.concatenate(trainX)
+        trainY = np.concatenate(trainY)
+        valX = np.concatenate(valX)
+        valY = np.concatenate(valY)
+        #One hot encode
+        trainY = to_categorical(trainY)
+        valY = to_categorical(valY)
+
+        #Normalizers
+        # Train Model- Create LSTM model or CCN model depending on data format.
+        # Normalize data accordingly to the data format
+        # Normalize data - with training set parameters
+        if dataFormat == 'freq':
+            globalMean = trainX.mean(axis=(0, 1))
+            globalStd = trainX.std(axis=(0, 1))
+        elif dataFormat == 'time':
+            globalMean = trainX.mean(axis=(0, 3)).reshape((1, 32, 1))
+            globalStd = trainX.std(axis=(0, 3)).reshape((1, 32, 1))
+
+        trainX = (trainX - globalMean) / (globalStd + 1e-18)
+        valX = (valX - globalMean) / (globalStd + 1e-18)
+
+        # Train Model - First round
+        if dataFormat == 'freq':
+            model, modelName = factoryModule.bestLstmModel(*(trainX.shape[1], trainX.shape[2]))
+        elif dataFormat == 'time':
+            model, modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
+
+        history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY,
+                                                                           epochs=700, verbose=0)
+
+        # Plot results
+        plotTitle = 'Training_first_round_{:}'.format(testUser)
+        completePlotPath = plotPath / plotTitle
+        trainingModule.createPlot(history, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping)
+
+        bestWeightsFirstRound = model.get_weights()
+
+        try:
+            for testingKey in testUserContainer.keys():
+
+                testX = testUserContainer[testingKey]['X']
+                testY = testUserContainer[testingKey]['y']
+
+                # Convert and normalize
+                testY = to_categorical(testY)
+                testX = (testX - globalMean) / (globalStd + 1e-18)
+
+                # Test results before
+                evalTestBefore = model.evaluate(testX, testY, verbose=0)[1]
+                print("Testing set {:} acc before {:0.3%}".format(testingKey, evalTestBefore))
+                K.clear_session()
+
+                #Remove testing from transfer data
+                availableSessions = list(testUserContainer.keys())
+                availableSessions.remove(testingKey)
+                transferX = np.concatenate([testUserContainer[i]['X'] for i in availableSessions])
+                transferY = np.concatenate([testUserContainer[i]['y'] for i in availableSessions])
+
+                # Get rest of the data of the testing user for the transfer
+                ############################################################
+                # Transfer learning routine
+
+                for i in range(1,9):
+                    percentage =  (1/8) * i
+
+                    portion = int(transferX.shape[0] * percentage)
+                    transferPortionX = transferX[:portion, :, :]
+                    transferPortionY = transferY[:portion]
+
+                    #Obtaine reduced transferTrain and transferVal sets
+                    transferTrainX, transferValX, transferTrainY, transferValY = \
+                                                train_test_split(transferPortionX, transferPortionY, test_size=0.30, random_state=42)
+                    #Normalize and convert
+                    transferTrainX = (transferTrainX - globalMean) / (globalStd + 1e-18)
+                    transferTrainY = to_categorical(transferTrainY)
+                    transferValX = (transferValX - globalMean) / (globalStd + 1e-18)
+                    transferValY = to_categorical(transferValY)
+
+
+                    #Training stage two - Transfer
+                    if dataFormat == 'freq':
+                        transferModel, modelName = factoryModule.bestLstmModel(*(trainX.shape[1], trainX.shape[2]))
+                    elif dataFormat == 'time':
+                        transferModel, modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
+
+                    transferModel.set_weights(bestWeightsFirstRound)
+                    transferHistory, transferModel, earlyStopping = trainingModule.trainModelEarlyStop(transferModel,
+                                                                                               transferTrainX,
+                                                                                               transferTrainY,
+                                                                                               transferValX,
+                                                                                               transferValY,
+                                                                                               X_test=testX,
+                                                                                               y_test=testY,
+                                                                                               epochs=700,
+                                                                                               verbose=0)
+
+                    #Plot training history
+                    plotTitle = '{:}_test{:}_PercentageOfTraining{:0.2%}_'.format(testUser, testingKey, (1/8) * i)
+                    completePlotPath = plotPath / plotTitle
+                    trainingModule.createPlot(transferHistory, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping)
+
+                    #Test results again
+                    evalTestAfter = transferModel.evaluate(testX, testY, verbose=0)[1]
+                    print("Testing set {:} acc after {:0.3%} with {:d}/{:d} ({:0.3%}) samples".format(testingKey, evalTestAfter,
+                                                                                                      transferPortionX.shape[0],
+                                                                                                      transferX.shape[0],
+                                                                                                      percentage))
+                    K.clear_session()
+
+                    # Save all the results
+                    data = {testingKey: [testUser, modelName,
+                                         testingKey, "{:0.3f}".format((1/8) * i),
+                                         evalTestBefore, evalTestAfter, ]}
+
+                    df1 = pd.DataFrame.from_dict(data, orient='index',
+                                                 columns=['User', 'ModelName', 'TestSession', 'proportionOfTransfer',
+                                                          'TestAccBefore', 'TestAccAfter',])
+                    resultsContainer.append(df1)
+        except Exception as e:
+            print("ERROR!!!!!!!!!!!!!!!!!!!")
+            print(e)
+            traceback.print_exc()
+        finally:
+            return pd.concat(resultsContainer)
+
 
 
 if __name__ == '__main__':
