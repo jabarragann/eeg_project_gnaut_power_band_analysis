@@ -7,10 +7,18 @@ import seaborn as sns
 sns.set()
 
 userList  = ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08']
+graphParameters = dict(top=0.88,
+                        bottom=0.08,
+                        left=0.06,
+                        right=0.94,
+                        hspace=0.485,
+                        wspace=0.255)
 
 if __name__ =='__main__':
 
     f, axes = plt.subplots(2, 4, sharex='col', sharey='row')
+    f.subplots_adjust(**graphParameters)
+
     axes = axes.reshape(-1)
 
     plotConfig = {'top':0.88, 'bottom':0.08, 'left':0.11,'right':0.9,'hspace':0.5,'wspace':0.2}
@@ -18,7 +26,7 @@ if __name__ =='__main__':
 
     for user, ax in zip(userList,axes):
         #Iterate through all the results files
-        resultsDir = 'aa11a_deidentified_pyprep_reduced_complete_analysis/'
+        resultsDir = 'aa13a_deidentified_pyprep_complete//'
         path = Path('./').resolve().parent / 'results' / 'EegResults' /'results_transfer9' / resultsDir
         dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
         for file in path.glob('*.csv'):
@@ -39,7 +47,8 @@ if __name__ =='__main__':
             # print(file.name, windowSize, sampleSize)
 
         summaryFrame = pd.DataFrame.from_dict(dataSummary)
-        summaryFrame = pd.pivot_table(summaryFrame, values='meanAcc',index=['Lstm Sample Size'], columns='Window Size')
+        summaryFrame = summaryFrame.rename(columns={'Lstm Sample Size': 'Observation size'})
+        summaryFrame = pd.pivot_table(summaryFrame, values='meanAcc',index=['Observation size'], columns='Window Size')
 
 
         # ax.set_title("{:}-{:}".format(resultsDir,user))

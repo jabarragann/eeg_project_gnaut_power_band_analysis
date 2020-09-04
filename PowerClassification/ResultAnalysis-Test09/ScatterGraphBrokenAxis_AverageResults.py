@@ -35,7 +35,7 @@ def createBrokenAxisPlot():
 if __name__ =='__main__':
     #'/temp/f-c-ChannelsExp-WithNoICA1'
     #Iterate through all the results files
-    resultsDir = 'aa11a_deidentified_pyprep_reduced_complete_analysis//'
+    resultsDir = 'aa13a_deidentified_pyprep_complete/'
     path = Path('./').resolve().parent / 'results' / 'EegResults' /'results_transfer9' / resultsDir
     dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
 
@@ -72,24 +72,26 @@ if __name__ =='__main__':
     fig2, (ax1, ax2) = createBrokenAxisPlot()
 
     # zoom-in / limit the view to different portions of the data
-    ax1.set_ylim([0.58, 0.9])  # outliers only
+    ax1.set_ylim([0.48, 0.9])  # outliers only
     ax2.set_ylim([0, 0.12])
     ax2.set_yticks([0, 0.10])
 
     #Axes parameters
-    fig2.text(0.03, 0.5, 'Average prediction accuracy', va='center', rotation='vertical') # Common Y label
-    ax2.set_xlabel("Lstm sample size in seconds")
+    fig2.text(0.03, 0.5, 'Average cross-session accuracy', va='center', rotation='vertical') # Common Y label
+    ax2.set_xlabel("Seconds of EEG per observation")
 
     ax1.grid(); ax2.grid()
-    ax1.set_title('Hyperparameters Optimization')
+    ax1.set_title('Cross-session accuracy vs size of the observations')
 
     plotArg = dict(marker='o', linestyle='-', alpha=0.5)
-    for w1 in [10,20]:
+    for w1 in [10,20,30]:
         tempFrame = summaryFrame.loc[summaryFrame['Window Size'] == w1]
         ax1.plot(tempFrame["Lstm Sample Size"], tempFrame['meanAcc'],label=str(w1)+" sec", **plotArg)
         ax2.plot(tempFrame["Lstm Sample Size"], tempFrame['meanAcc'], label=str(w1) + " sec", **plotArg)
 
-    ax2.set_xticks(tempFrame["Lstm Sample Size"])
+    if w1 == 10:
+        ax2.set_xticks(tempFrame["Lstm Sample Size"])
+
     ax1.legend(title="Window Size", fancybox = True, shadow=True, )
     ax1.set_facecolor('0.9'); ax2.set_facecolor('0.9')
 
