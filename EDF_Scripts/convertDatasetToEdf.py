@@ -16,9 +16,14 @@ EEG_channels = ["FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
 mne.set_log_level("WARNING")
 
 if __name__ == "__main__":
+    ##EXP2
+    srcPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U08\\S01\\Sensor-Data\\Process-Eeg\\txt"
+    dstPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U08\\S01\\Sensor-Data\\Process-Eeg\\edf"
 
-    srcPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U01\\S02\\Sensor-Data\\Process-Eeg\\txt"
-    dstPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U01\\S02\\Sensor-Data\\Process-Eeg\\edf"
+    #EXP1
+    # srcPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment1-Pilot\\UI07\\raw_txt"
+    # dstPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment1-Pilot\\UI07\\raw_edf"
+
     # srcPath = "./data5/src"
     # dstPath = "./data5/dst"
 
@@ -48,9 +53,9 @@ if __name__ == "__main__":
         writer.setPatientName(user)
 
         #Set label
-        label = df['label'].values.mean()
-        label = "low workload" if label < 7.5 else "high workload"
-        writer.setPatientAdditional(label)
+        # label = df['label'].values.mean()
+        # label = "low workload" if label < 7.5 else "high workload"
+        # writer.setPatientAdditional(label)
 
         # Signals
         signal_headers = highlevel.make_signal_headers(EEG_channels, sample_rate=250)

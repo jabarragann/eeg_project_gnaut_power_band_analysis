@@ -69,7 +69,7 @@ if __name__ == '__main__':
 
     # Load results data
     timePath = Path('C:\\Users\\asus\\PycharmProjects\\eeg_project_gnaut_power_band_analysis\\TimeClassification\\results\\results_transfer10\\aa11_pyprep\\window10s_sampleSize140s.csv')
-    freqPath = Path(r'C:\Users\asus\PycharmProjects\eeg_project_gnaut_power_band_analysis\PowerClassification\results\EegResults\results_transfer10\aa11_pyprep\window10s_sampleSize110s.csv')
+    freqPath = Path(r'C:\Users\asus\PycharmProjects\eeg_project_gnaut_power_band_analysis\PowerClassification\results\EegResults\results_transfer10\aa13a_pyprep_complete\window10s_sampleSize110s.csv')
     assert timePath.exists(), "Make sure time path is correctly set"
     assert freqPath.exists(), "Make sure freq path are correctly set"
     timeData = formatDataForGraph(timePath)

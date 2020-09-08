@@ -3,6 +3,8 @@ Use the following script to plot the results from the multi-user models or cross
 This script shows what are the improvements of the accuracy as data of a new user is injected
 into the model.
 """
+from pathlib import Path
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +15,10 @@ plt.style.use('seaborn-dark')
 if __name__ == '__main__':
     # userDict = {'ryan':'User 1', 'jhony':'User 2','juan':'User 3','jackie':'User 4'}
     #Format data
-    df = pd.read_csv("./Data/window10s_sampleSize110s.csv")
+    root = Path(r'C:\Users\asus\PycharmProjects\eeg_project_gnaut_power_band_analysis\PowerClassification')
+    freqPath = root / r'results\EegResults\results_transfer10\aa13a_pyprep_complete\window10s_sampleSize110s.csv'
+
+    df = pd.read_csv(freqPath)
     proportions = df.proportionOfTransfer.unique()
     users = df.User.unique()
 
@@ -57,7 +62,6 @@ if __name__ == '__main__':
         means = temp.mean(axis=0)
         std = temp.std(axis=0)
         x = list(map(lambda l: float(l), prop))
-
 
         #Plot data
         axes[idx].errorbar(x, means, yerr=std, fmt='o', linestyle='-', ecolor='black', capsize=5,color=colors[idx])
