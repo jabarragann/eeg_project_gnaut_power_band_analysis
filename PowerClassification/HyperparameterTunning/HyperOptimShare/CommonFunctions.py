@@ -37,7 +37,7 @@ EEG_CHANNELS = [
             "C4", "T8", "CP5", "CP1", "CP2", "CP6", "P7", "P3",
             "PZ", "P4", "P8", "PO3","PO7", "PO4", "PO8", "OZ"]
 POWER_COEFFICIENTS = ['Delta', 'Theta', 'Alpha', 'Beta']
-DATA_PATH_10 = Path('./../data/DifferentWindowSizeData_pyprep/{:02d}s/'.format(10)).resolve()
-DATA_PATH_20 = Path('./../data/DifferentWindowSizeData_pyprep/{:02d}s/'.format(20)).resolve()
-DATA_PATH_30 = Path('./../data/DifferentWindowSizeData_pyprep/{:02d}s/'.format(30)).resolve()
+DATA_PATH_10 = Path('./../data/de-identified-pyprep-dataset-reduced/{:02d}s/'.format(10)).resolve()
+DATA_PATH_20 = Path('./../data/de-identified-pyprep-dataset-reduced/{:02d}s/'.format(20)).resolve()
+DATA_PATH_30 = Path('./../data/de-identified-pyprep-dataset-reduced/{:02d}s/'.format(30)).resolve()
 DATA_DICT = {"data_10":DATA_PATH_10,"data_20":DATA_PATH_20,"data_30":DATA_PATH_30}

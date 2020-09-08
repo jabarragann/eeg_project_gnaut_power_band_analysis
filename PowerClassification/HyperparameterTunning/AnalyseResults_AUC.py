@@ -3,6 +3,8 @@ from PowerClassification.HyperparameterTunning.HyperOptimShare import CommonFunc
 from PowerClassification.Utils.NetworkTraining import NetworkFactoryModule
 from PowerClassification.Utils.NetworkTraining import NetworkTrainingModule
 from PowerClassification.Utils.NetworkTraining import DataLoaderModule
+from sklearn.metrics import roc_curve, auc
+import matplotlib.pyplot as plt
 
 if __name__ == "__main__":
     # Create factory module
@@ -65,10 +67,31 @@ if __name__ == "__main__":
     history, model, earlyStopCallback = trainer.trainModelEarlyStop(model, trainX, trainY, valX, valY,
                                                                     verbose=0, epochs=300)
 
-    trainer.createPlot(history,"Training best model","./bestTrainPlot",show_plot=False,earlyStopCallBack=earlyStopCallback,save=True)
 
     results = model.evaluate(testX,testY)
+
+    y_score = model.predict(testX)
     print("Best model. loss: {:0.4f}, acc: {:0.4f}".format(results[0],results[1]))
+
+    fpr, tpr, thresh = roc_curve(testY[:,1], y_score[:,1])
+    roc_auc = auc(fpr, tpr)
+
+    trainer.createPlot(history, "Training best model", "./bestTrainPlot", show_plot=False, earlyStopCallBack=earlyStopCallback, save=True)
+
+    plt.figure()
+    lw = 2
+    plt.plot(fpr, tpr, color='darkorange',
+             lw=lw, label='ROC curve (area = %0.2f)' % roc_auc)
+    plt.plot([0, 1], [0, 1], color='navy', lw=lw, linestyle='--')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver operating characteristic example')
+    plt.legend(loc="lower right")
+
+    plt.savefig("AUC_ROC" + '.png')
+    plt.show()
 
 
 
