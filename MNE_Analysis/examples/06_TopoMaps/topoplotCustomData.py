@@ -38,6 +38,8 @@ epochs.load_data()
 epochs.plot_sensors(kind='topomap', ch_type='all', show_names=True)
 
 #Frequency spatial distributions
-epochs.plot_psd_topomap(ch_type='eeg', normalize=True)
+# bands_list = [(0, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'), (12, 30, 'Beta'), (30, 45, 'Gamma')]
+bands_list = [(0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'), (12, 30, 'Beta') ]
+epochs.plot_psd_topomap(bands=bands_list ,ch_type='eeg', normalize=True)
 
 plt.show()
