@@ -32,18 +32,38 @@ newColumnNames = [x+'-'+y for x,y in product(EEG_channels, Power_coefficients)] 
 print(newColumnNames)
 
 #Global variables
-users = ['UI01','UI02','UI03','UI04','UI05','UI06']
-windowSize = [10, 20, 30]
+users = ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08']
+
+# windowSize = [10, 20, 30]
+windowSize = [2, 5, 10, 20, 30]
 rawDataPath = Path('C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment1-Pilot')
-dstPath = Path('./data/') / 'de-identified-pyprep-dataset'
+data_preprocess = 'pyprep'
+dstPath = Path('./data/') / 'de-identified-{:}-dataset-reduced-critically-exp'.format(data_preprocess)
 sf = 250
 
+#Sessions black list
+black_list = {'UI01':['1','6','3','7'],
+              'UI02':['7','4','2'],
+              'UI03':['2'],
+              'UI04':['4'],
+              'UI05':['3'],
+              'UI06':['2'],
+              'UI07':[''],
+              'UI08':[''],}
 
-def calculatePowerBand(epoched_data, data_label):
+#Reduce to only 4 minutes of data
+def calculatePowerBand(epoched_data, data_label, window):
     counter=0
     dataDict = {}
 
     epoched_data.load_data()
+
+
+    if window < 4:
+        win_sec = window * 0.95
+    else:
+        win_sec = 4
+
     for i in range(len(epoched_data)):
 
         data  =  epoched_data[i]
@@ -52,7 +72,7 @@ def calculatePowerBand(epoched_data, data_label):
 
         # (0.0, 0.5, 'Low'), (0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),(12, 30, 'Beta'), (30, 50, 'Gamma')
         # Calculate bandpower
-        bd = yasa.bandpower(data, sf=sf, ch_names=EEG_channels, win_sec=4,
+        bd = yasa.bandpower(data, sf=sf, ch_names=EEG_channels, win_sec=win_sec,
                             bands=[(0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),
                                    (12, 30, 'Beta'), (30, 50, 'Gamma')])
 
@@ -90,45 +110,64 @@ if __name__ == '__main__':
             task = re.findall('(?<=_S[0-9]_T[0-9]_).+(?=_)', file.name)[0]
             preprocess = re.findall('(?<=_{:}_).+(?=\.edf)'.format(task), file.name)[0]
 
-            if uid in users and preprocess == 'pyprep':
-                dstPathFinal = dstPath/'{:02d}s/{:}'.format(w1,uid)
+            #Only use files from a specific preprocess
+            if uid in users and preprocess == data_preprocess and task !='Baseline':
+                if session in black_list[uid]:
+                    print("Black listed, ", file.name)
+                else:
+                    dstPathFinal = dstPath/'{:02d}s/{:}'.format(w1,uid)
 
-                if not Path.exists( dstPathFinal ):
-                    utilities.makeDir(dstPathFinal)
+                    if not Path.exists( dstPathFinal ):
+                        utilities.makeDir(dstPathFinal)
 
-                #read file
-                raw = mne.io.read_raw_edf(file)
-                # Split data into epochs
-                totalPoints =  raw.get_data().shape[1]
-                nperE = sf * w1  # Number of samples per Epoch
+                    #read file
+                    raw = mne.io.read_raw_edf(file)
+                    #Filter data
+                    raw.load_data()
+                    raw.filter(0.5, 30)
 
-                eTime = int(w1 / 2 * sf)
-                events_array = []
+                    #Reduce files to 4 minutes only
+                    maxPoints = 60000 # 250hz * 5 min * 60 s
+                    totalPoints = raw.get_data().shape[1]
 
-                while eTime < totalPoints:
-                    events_array.append([eTime, 0, 1])
-                    eTime += sf * w1
+                    if totalPoints >  maxPoints:
+                        extraTime = totalPoints -  maxPoints #In samples
+                        extraTime  = extraTime / 250 #In seconds
+                        maxTime =    totalPoints /250 #In seconds
 
-                events_array = np.array(events_array)
+                        raw.crop(tmin=extraTime/2, tmax=maxTime - extraTime/2)
+                    # Split data into epochs
+                    totalPoints = raw.get_data().shape[1]
+                    nperE = sf * w1  # Number of samples per Epoch
 
-                epochs = mne.Epochs(raw, events_array, tmin=-(w1 / 2 - 0.02 * w1), tmax=(w1 / 2 - 0.02 * w1))
-                epochs.load_data()
-                epochs = epochs.filter(0.5, 30)
+                    eTime = int(w1 / 2 * sf)
+                    events_array = []
 
-                #Label
-                assert task in ['pegInversion','pegNormal'], '"{:}" is not recognized as a label'
-                if task == 'pegInversion':
-                    label = 1
-                elif task == 'pegNormal':
-                    label = 0
+                    while eTime < totalPoints:
+                        events_array.append([eTime, 0, 1])
+                        eTime += sf * w1
 
-                #calculate power bands
-                print(file.name)
-                powerBandFile = calculatePowerBand(epochs, label)
+                    events_array = np.array(events_array)
 
-                pf = dstPathFinal / '{:}_S{:}_T{:}_pow.txt'.format(uid,session,trial)
-                powerBandFile.to_csv(pf, sep=',')
+                    epochs = mne.Epochs(raw, events_array, tmin=-(w1 / 2 - 0.02 * w1), tmax=(w1 / 2 - 0.02 * w1))
+                    # epochs.load_data()
+                    #Changed this instead of filtering the epochs to filter the entire signal.
+                    # epochs = epochs.filter(0.5, 30)
 
-                print(pf)
+                    #Label
+                    assert task in ['pegInversion','pegNormal'], '{:} is not recognized as a label'.format(task)
+                    if task == 'pegInversion':
+                        label = 1
+                    elif task == 'pegNormal':
+                        label = 0
+
+                    #calculate power bands
+                    print(file.name)
+                    powerBandFile = calculatePowerBand(epochs, label, w1)
+
+                    pf = dstPathFinal / '{:}_S{:}_T{:}_pow.txt'.format(uid,session,trial)
+                    powerBandFile.to_csv(pf, sep=',')
+
+                    # print(pf)
 
 
