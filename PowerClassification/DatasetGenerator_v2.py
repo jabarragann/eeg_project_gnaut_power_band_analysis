@@ -127,7 +127,7 @@ if __name__ == '__main__':
                     raw.filter(0.5, 30)
 
                     #Reduce files to 4 minutes only
-                    maxPoints = 60000 # 250hz * 5 min * 60 s
+                    maxPoints = 67500 # 250hz * 4.5 min * 60 s
                     totalPoints = raw.get_data().shape[1]
 
                     if totalPoints >  maxPoints:
@@ -140,10 +140,10 @@ if __name__ == '__main__':
                     totalPoints = raw.get_data().shape[1]
                     nperE = sf * w1  # Number of samples per Epoch
 
-                    eTime = int(w1 / 2 * sf)
+                    eTime = int(w1 / 2 * sf) + raw.first_samp
                     events_array = []
 
-                    while eTime < totalPoints:
+                    while eTime <  raw.last_samp:
                         events_array.append([eTime, 0, 1])
                         eTime += sf * w1
 
