@@ -20,31 +20,30 @@ if __name__ ==  '__main__':
 
     dataRootPath = Path(r"C:\Users\asus\PycharmProjects\eeg_project_gnaut_power_band_analysis\PowerClassification\data\de-identified-pyprep-dataset-reduced-critically-exp")
 
-    user = 'UI02'
-    firstSession = sessDict[user]
     window = '02s'
-    dataRootPath = dataRootPath / window / user
-
     dataList = []
-    for fi in dataRootPath.rglob("*.txt"):
-        sess = re.findall('(?<=_S)[0-9](?=_T[0-9]_)', fi.name)[0]
-        trial = re.findall('(?<=_S[0-9]_T)[0-9](?=_)', fi.name)[0]
+    for u in sessDict.keys():
+        for fi in (dataRootPath / window / u).rglob("*.txt"):
+            sess = re.findall('(?<=_S)[0-9](?=_T[0-9]_)', fi.name)[0]
+            trial = re.findall('(?<=_S[0-9]_T)[0-9](?=_)', fi.name)[0]
 
-        if sess == firstSession:
-            print(fi.name)
-            df = pd.read_csv(fi, index_col=0)
-            df['Session'] = sess
-            df['Trial'] = trial
-            df['User'] = user
-            dataList.append(df)
+            if sess == sessDict[u]:
+                print(fi.name)
+                df = pd.read_csv(fi, index_col=0)
+                df['Session'] = sessDict[u]
+                df['Trial'] = trial
+                df['User'] = u
+                dataList.append(df)
 
     df = pd.concat(dataList)
 
+    #Create string labels
+    df['StrLabel'] = df['Label'].map(lambda x: "High" if x == 1 else "Low")
     #Remove unamed columns
     df = df.loc[:, ~df.columns.str.contains('^Unnamed')]
 
     features = df.columns.values
-    features = df.columns.values[:-4]
+    features = df.columns.values[:-5]
 
     channels = set()
     bandpower = set()
@@ -65,9 +64,10 @@ if __name__ ==  '__main__':
         feat2 = renameColumn(feat)
 
         # Ordinary Least Squares (OLS) model
-        model = ols('{:} ~ C(Label)'.format(feat2), data=df).fit()
+        formula = '{:} ~ C(StrLabel) + C(User) + C(StrLabel):C(User)'.format(feat2)
+        model = ols(formula, data=df).fit()
         anova_table = sm.stats.anova_lm(model, typ=2)
         #Add p-values
-        anovaResults[ch][p] = anova_table["PR(>F)"]["C(Label)"]
+        anovaResults[ch][p] = anova_table["PR(>F)"]["C(StrLabel)"]
 
-    anovaResults.to_csv('./p_values_results.csv', sep=',')
+    anovaResults.to_csv('./p_values_all_users.csv', sep=',')
