@@ -21,7 +21,13 @@ if __name__ =='__main__':
         df = pd.read_csv(file, sep = ',')
         df['WindowSize'] = windowSize
         df['ObservationSize'] = sampleSize
-        dataSummary.append(df.copy())
+        varianceDf = df[['User','TestAcc']].groupby(by='User').std()
+        varianceDf['User'] = varianceDf.index
+        varianceDf.reset_index(drop=True, inplace=True)
+        varianceDf['WindowSize'] = windowSize
+        varianceDf['ObservationSize'] = sampleSize
+        varianceDf.rename( columns={'TestAcc':'TestAccVar'},inplace=True)
+        dataSummary.append(varianceDf)
 
     dataCombined = pd.concat(dataSummary)
-    dataCombined.to_csv('./results/-' +resultsDir+'.csv',sep=',')
+    dataCombined.to_csv('./results/-variance-' +resultsDir+'.csv',sep=',')

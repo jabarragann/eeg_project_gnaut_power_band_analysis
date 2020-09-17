@@ -26,7 +26,7 @@ if __name__ =='__main__':
 
     for user, ax in zip(userList,axes):
         #Iterate through all the results files
-        resultsDir = 'aa13a_deidentified_pyprep_complete//'
+        resultsDir = 'aa14_pyprep_complete/'
         path = Path('./').resolve().parent / 'results' / 'EegResults' /'results_transfer9' / resultsDir
         dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
         for file in path.glob('*.csv'):

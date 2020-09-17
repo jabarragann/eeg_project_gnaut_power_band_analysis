@@ -35,7 +35,7 @@ def createBrokenAxisPlot():
 if __name__ =='__main__':
     #'/temp/f-c-ChannelsExp-WithNoICA1'
     #Iterate through all the results files
-    resultsDir = 'aa13a_deidentified_pyprep_complete/'
+    resultsDir = 'aa14_pyprep_complete/'
     path = Path('./').resolve().parent / 'results' / 'EegResults' /'results_transfer9' / resultsDir
     dataSummary = {'Window Size': [], 'Lstm Sample Size': [], 'meanAcc':[], 'std': []}
 
@@ -84,7 +84,7 @@ if __name__ =='__main__':
     ax1.set_title('Cross-session accuracy vs size of the observations')
 
     plotArg = dict(marker='o', linestyle='-', alpha=0.5)
-    for w1 in [10,20,30]:
+    for w1 in [2,5,10,20,30]:
         tempFrame = summaryFrame.loc[summaryFrame['Window Size'] == w1]
         ax1.plot(tempFrame["Lstm Sample Size"], tempFrame['meanAcc'],label=str(w1)+" sec", **plotArg)
         ax2.plot(tempFrame["Lstm Sample Size"], tempFrame['meanAcc'], label=str(w1) + " sec", **plotArg)
