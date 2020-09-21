@@ -20,7 +20,7 @@ if __name__ ==  '__main__':
 
     dataRootPath = Path(r"C:\Users\asus\PycharmProjects\eeg_project_gnaut_power_band_analysis\PowerClassification\data\de-identified-pyprep-dataset-reduced-critically-exp")
 
-    window = '02s'
+    window = '05s'
     dataList = []
     for u in sessDict.keys():
         for fi in (dataRootPath / window / u).rglob("*.txt"):
@@ -70,4 +70,4 @@ if __name__ ==  '__main__':
         #Add p-values
         anovaResults[ch][p] = anova_table["PR(>F)"]["C(StrLabel)"]
 
-    anovaResults.to_csv('./p_values_all_users.csv', sep=',')
+    anovaResults.to_csv('./results/p_values_all_users_{:}.csv'.format(window), sep=',')

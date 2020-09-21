@@ -21,7 +21,7 @@ if __name__ ==  '__main__':
 
     dataRootPath = Path(r"C:\Users\asus\PycharmProjects\eeg_project_gnaut_power_band_analysis\PowerClassification\data\de-identified-pyprep-dataset-reduced-critically-exp")
 
-    window = '02s'
+    window = '05s'
     dataList = []
     for u in sessDict.keys():
         for fi in (dataRootPath / window / u).rglob("*.txt"):
@@ -73,7 +73,7 @@ if __name__ ==  '__main__':
         assert len(finalResults.loc[finalResults['Channel'] == ch].index.values == 1),  'Error with pandas logic'
 
         idx = finalResults.loc[finalResults['Channel'] == ch].index.values[0]
-        if p == 'Alpha' or p == 'Theta':
+        if p == 'Alpha' or p == 'Theta' or p == 'Beta' or p == 'Delta':
             feat2 = renameColumn(feat)
             pivotT = df[[feat2]+['StrLabel']].groupby(['StrLabel']).mean()
             lowMean  = pivotT[feat2]['Low']
@@ -92,11 +92,20 @@ if __name__ ==  '__main__':
                 finalResults.at[idx,'ThetaHigh'] = highMean
                 finalResults.at[idx,'ThetaDiff'] = highMean - lowMean
                 finalResults.at[idx,'ThetaPvalue'] = anova_table["PR(>F)"]["C(StrLabel)"]
-            else:
+            elif p == 'Alpha':
                 finalResults.at[idx,'AlphaLow'] = lowMean
                 finalResults.at[idx,'AlphaHigh'] = highMean
                 finalResults.at[idx,'AlphaDiff'] = highMean - lowMean
                 finalResults.at[idx,'AlphaPvalue'] = anova_table["PR(>F)"]["C(StrLabel)"]
+            elif p == 'Beta':
+                finalResults.at[idx, 'BetaLow'] = lowMean
+                finalResults.at[idx, 'BetaHigh'] = highMean
+                finalResults.at[idx, 'BetaDiff'] = highMean - lowMean
+                finalResults.at[idx, 'BetaPvalue'] = anova_table["PR(>F)"]["C(StrLabel)"]
+            elif  p == 'Delta':
+                finalResults.at[idx, 'DeltaLow'] = lowMean
+                finalResults.at[idx, 'DeltaHigh'] = highMean
+                finalResults.at[idx, 'DeltaDiff'] = highMean - lowMean
+                finalResults.at[idx, 'DeltaPvalue'] = anova_table["PR(>F)"]["C(StrLabel)"]
 
-
-    finalResults.to_csv('./results/alpha_theta_analysis.csv', sep=',', index=None)
+    finalResults.to_csv('./results/alpha_theta_analysis_{:}.csv'.format(window), sep=',', index=None)

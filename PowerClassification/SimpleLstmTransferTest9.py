@@ -60,20 +60,24 @@ def readCommandLineArg(params):
 #                  "C4", "T8", "CP5", "CP1", "CP2", "CP6", "P7", "P3",
 #                  "PZ", "P4", "P8", "PO7", "PO3", "PO4", "PO8", "OZ"]
 #'UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08'
+#[11,25,50,75,100,125,150,175]
+#['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08']
 if __name__ == '__main__':
     #Initial parameters
-    paramsDict = {'TESTED_USERS': ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08'],
+    paramsDict = {'TESTED_USERS': ['UI05'],
               'ALL_USERS': ['UI01','UI02','UI03','UI04','UI05','UI06','UI07','UI08'],
               'EEG_CHANNELS': [   "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
                                   "F8","FC5","FC1","FC2","FC6","T7","C3","CZ",
                                   "C4","T8","CP5","CP1","CP2","CP6","P7","P3",
                                   "PZ","P4","P8","PO3","PO4","OZ"], #PO8 and PO7 removed
+            #   'EEG_CHANNELS':['AF3', 'AF4', 'F7', 'F3', 'FZ', 'F4', 'F8',
+            # 'FC5', 'FC1', 'FC2', 'FC6', 'T7', 'C3', 'C4', 'T8', 'CP5', 'CP6'],
               'POWER_COEFFICIENTS': ['Delta', 'Theta', 'Alpha', 'Beta'],
-              'LSTM_SAMPLE_SIZE': [11,25,50,75,100,125,150,175],
-              'WINDOW_SIZE': [2,10,20,30],
-              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa13a_deidentified_pyprep/',
-              'SOURCE_PATH': './data/de-identified-pyprep-dataset-reduced-critically/',
-              'AIM':"Full "
+              'LSTM_SAMPLE_SIZE': [150],
+              'WINDOW_SIZE': [5],
+              'RESULTS_ROOT': Path('.').resolve() / 'results/EegResults/results_transfer9/aa16b_pyprep_complete/',
+              'SOURCE_PATH': './data/de-identified-pyprep-dataset-reduced-critically-exp/',
+              'AIM':"150 - 5 - fullset of channels"
               }
     # Read command line arguments if any
     paramsDict = readCommandLineArg(paramsDict)
