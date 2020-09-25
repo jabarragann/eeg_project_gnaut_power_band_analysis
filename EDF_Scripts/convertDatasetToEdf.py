@@ -17,8 +17,8 @@ mne.set_log_level("WARNING")
 
 if __name__ == "__main__":
     ##EXP2
-    srcPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U08\\S01\\Sensor-Data\\Process-Eeg\\txt"
-    dstPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U08\\S01\\Sensor-Data\\Process-Eeg\\edf"
+    srcPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U09\\S02\\Sensor-Data\\Process-Eeg\\txt"
+    dstPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment2-Data\\Dataset\\U09\\S02\\Sensor-Data\\Process-Eeg\\edf"
 
     #EXP1
     # srcPath = "C:\\Users\\asus\\OneDrive - purdue.edu\\RealtimeProject\\Experiment1-Pilot\\UI07\\raw_txt"
