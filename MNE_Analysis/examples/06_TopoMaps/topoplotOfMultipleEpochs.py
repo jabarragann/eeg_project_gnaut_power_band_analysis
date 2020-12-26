@@ -30,16 +30,24 @@ events_array = np.vstack((events_array , [67500+5000,0,1]))
 #Get 20 seconds Epochs from data
 epochs = mne.Epochs(raw, events_array, tmin=-9.5, tmax=9.5)
 
-#Select only first four epochs
-epochs = epochs[:4]
-epochs.load_data()
+fig, axes = plt.subplots(2,3)
 
-#Plot sensor location
-epochs.plot_sensors(kind='topomap', ch_type='all', show_names=True)
+for i in range(2):
 
-#Frequency spatial distributions
-# bands_list = [(0, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'), (12, 30, 'Beta'), (30, 45, 'Gamma')]
-bands_list = [(0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'), (12, 30, 'Beta') ]
-epochs.plot_psd_topomap(bands=bands_list ,ch_type='eeg', normalize=True, cmap='RdBu_r')
+    #Select only first four epochs
+    singleEpoch = epochs[i]
+    singleEpoch.load_data()
 
+    #Plot sensor location
+    # singleEpoch.plot_sensors(kind='topomap', ch_type='all', show_names=True)
+
+    #Frequency spatial distributions
+    # bands_list = [(0, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'), (12, 30, 'Beta'), (30, 45, 'Gamma')]
+    # bands_list = [(0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'), (12, 30, 'Beta') ]
+    bands_list = [ (4, 8, 'Theta'), (8, 12, 'Alpha'), (12, 30, 'Beta') ]
+    epochFig = singleEpoch.plot_psd_topomap(bands=bands_list ,ch_type='eeg', normalize=True, show=False\
+                                            , axes=axes[i,:],vlim='joint', cmap='RdBu_r', outlines='skirt')
+    # ax_list = epochFig.axes
+    # axes[i,:] = ax_list
+    x=0
 plt.show()
