@@ -21,14 +21,14 @@ def clean_axes(a):
     a.set_yticks([])
     a.set_yticks([],minor=True)
 
-def create_cbar(fig, im, ax, ylabel="default"):
-    cbar = fig.colorbar(im, ax=ax, pad=0.20, fraction=0.046,)
+def create_cbar(fig, im, ax, ylabel="default",pad=0.20,font=12, fraction=0.046):
+    cbar = fig.colorbar(im, ax=ax, pad=pad, fraction=fraction,)
     clean_axes(ax)
-    cbar.ax.set_ylabel(ylabel, rotation=270, fontsize=12, labelpad=22)
+    cbar.ax.set_ylabel(ylabel, rotation=270, fontsize=font, labelpad=22)
     cbar.ax.yaxis.set_ticks_position('left')
     return cbar
 
-def create_topo(data_frame, fig_title, ax, v_min=-0.022, v_max=0.022):
+def create_topo(data_frame, fig_title, ax, v_min=-0.022, v_max=0.022,):
     from mne.viz import plot_topomap
 
     mask = np.array([True for i in range(30)])

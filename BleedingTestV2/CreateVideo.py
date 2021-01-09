@@ -24,18 +24,21 @@ EEG_channels = [  "FP1","FP2","AF3","AF4","F7","F3","FZ","F4",
 
 
 class feature_factory:
-    def __init__(self, window_length, window_overlap):
+    def __init__(self, window_length_samp, window_overlap_samp):
 
+        self.rolling_filter_size = 30
         self.sf =250
-        self.window_length = window_length
-        self.overlap = window_overlap
-        self.window_size = int(self.sf*self.window_length)
-        self.incoming_chunk_size  = int(self.sf*self.window_length - self.sf*self.overlap)
+        self.window_length = window_length_samp
+        self.overlap = window_overlap_samp
+        # self.window_size = int(self.sf*self.window_length)
+        self.incoming_chunk_size  = self.window_length - self.overlap
 
         self.dataBuffer = np.zeros((30000,30))+1.2
-        self.mean_rolling_fz = np.zeros((4,15))
-        self.mean_rolling_t8 = np.zeros((4,15))
-        self.mean_rolling_t7 = np.zeros((4,15))
+        self.mean_rolling_fz = np.zeros((4,self.rolling_filter_size))
+        self.mean_rolling_t8 = np.zeros((4,self.rolling_filter_size))
+        self.mean_rolling_t7 = np.zeros((4,self.rolling_filter_size))
+
+        self.means_rolling_array = np.zeros((30,4,self.rolling_filter_size))
 
     def make_prediction(self, chunk):
 
@@ -52,15 +55,15 @@ class feature_factory:
         ##Calculate Features##
         ######################
         # Check that data is in the correct range
-        assert all([0.4 < abs(self.dataBuffer[-2*self.incoming_chunk_size:, 2].min()) < 800,
-                    1 < abs(self.dataBuffer[-2*self.incoming_chunk_size:, 7].max()) < 800,
-                    0.4 < abs(self.dataBuffer[-2*self.incoming_chunk_size:, 15].min()) < 800]), \
+        assert all([0.4 < abs(self.dataBuffer[-self.window_length:, 2].min()) < 800,
+                    1 < abs(self.dataBuffer[-self.window_length:, 7].max()) < 800,
+                    0.4 < abs(self.dataBuffer[-self.window_length:, 15].min()) < 800]), \
             "Check the units of the data that is about to be process. " \
             "Data should be given as uv to the get bandpower coefficients function "
 
         # Get bandPower coefficients
-        win_sec = 0.95 * self.window_length
-        bandpower = yasa.bandpower(self.dataBuffer[-2*self.incoming_chunk_size:, :].transpose(),
+        win_sec = 0.95 * self.window_length / self.sf
+        bandpower = yasa.bandpower(self.dataBuffer[-self.window_length:, :].transpose(),
                                    sf=self.sf, ch_names=EEG_channels, win_sec=win_sec,
                                    bands=[(0.5, 4, 'Delta'), (4, 8, 'Theta'), (8, 12, 'Alpha'),
                                           (12, 30, 'Beta'), (30, 50, 'Gamma')])
@@ -72,12 +75,18 @@ class feature_factory:
         self.mean_rolling_t8 = np.roll(self.mean_rolling_t8, -1, axis=1)
         self.mean_rolling_t7 = np.roll(self.mean_rolling_t7, -1, axis=1)
 
+        self.means_rolling_array = np.roll(self.means_rolling_array, -1, axis=2)
+
         self.mean_rolling_fz[:,-1] = bandpower["FZ"].values
         self.mean_rolling_t8[:,-1] = bandpower["T8"].values
         self.mean_rolling_t7[:,-1] = bandpower["T7"].values
 
+        self.means_rolling_array[:,:,-1] = bandpower.values.T
+        rolling_mean = self.means_rolling_array.mean(axis=2)
+        rolling_mean = pd.DataFrame(rolling_mean, index=EEG_channels,columns=Power_coefficients)
+
         return [self.mean_rolling_fz.mean(axis=1)[0], self.mean_rolling_t8.mean(axis=1)[0],
-                self.mean_rolling_t7.mean(axis=1)[0]]
+                self.mean_rolling_t7.mean(axis=1)[0]], rolling_mean
 
 
 class GraphGenerator:
@@ -102,8 +111,8 @@ class GraphGenerator:
         self.prediction_ax[0].set_xlim(0.0, 65)
 
         #topo graph
-        self.topo_fig, self.topo_ax = plt.subplots(1,1)
-        self.cbar = None
+        self.topo_fig, self.topo_ax = plt.subplots(1,2)
+        self.cbar = []
 
         #format for barchart
         self.cmapHigh = cm.ScalarMappable(col.Normalize(-0, 1), 'RdBu_r')
@@ -178,10 +187,36 @@ class GraphGenerator:
         return img
     def update_topo_graph(self, data, first_time=False):
         self.topo_ax.clear()
-        topo = self.create_topo(data, ["FZ","T8","T7"], "Delta band [0.4-5hz]",self.topo_ax,v_min=0.40,v_max=0.75)
-
+        # topo = self.create_topo(data, ["FZ","T8","T7"], "Delta band [0.4-5hz]",self.topo_ax,v_min=0.40,v_max=0.75)
+        topo = self.create_topo(data, ["FZ", "T8", "T7"], "Delta band [0.4-5hz]", self.topo_ax, v_min=0.02, v_max=0.15)
         if first_time:
             self.cbar = create_cbar(self.topo_fig,topo, self.topo_ax, ylabel= "Relative power")
+
+        self.topo_fig.canvas.draw()
+        img = self.create_img_from_graph(self.topo_fig)
+
+        return img
+    def update_topo_graph_v2(self,data_frame, first_time=False):
+        self.topo_ax[0].clear()
+        self.topo_ax[1].clear()
+
+        ch_to_plot = EEG_channels
+        significant_ch = [] #"FZ","T8","T7"
+
+
+        if first_time:
+            data = data_frame
+            topo = self.create_topo(data_frame, ch_to_plot,significant_ch, "Delta band [0.4-5hz]",
+                                    self.topo_ax[0], v_min=0.15, v_max=0.60)
+            self.cbar.append(create_cbar(self.topo_fig, topo, self.topo_ax[0], ylabel="Relative power",pad=0.25,font=8,fraction=0.036))
+            topo = self.create_topo(data_frame, ch_to_plot, significant_ch, "Alpha band [8-12hz]",
+                                    self.topo_ax[1], v_min=0.02, v_max=0.15)
+            self.cbar.append(create_cbar(self.topo_fig, topo, self.topo_ax[1], ylabel="Relative power",pad=0.25,font=8,fraction=0.036))
+        else:
+            topo = self.create_topo(data_frame.loc[ch_to_plot,"Delta"].values, ch_to_plot,significant_ch, "Delta band [0.4-5hz]",
+                                    self.topo_ax[0], v_min=0.15, v_max=0.60)
+            topo = self.create_topo(data_frame.loc[ch_to_plot, "Alpha"].values, ch_to_plot,significant_ch, "Alpha band [8-12hz]",
+                                    self.topo_ax[1], v_min=0.02, v_max=0.15)
 
         self.topo_fig.canvas.draw()
         img = self.create_img_from_graph(self.topo_fig)
@@ -205,10 +240,10 @@ class GraphGenerator:
         self.labels[-1] = l
 
     @staticmethod
-    def create_topo(data_frame, ch_to_plot, fig_title, ax, v_min=-0.022, v_max=0.022):
+    def create_topo(data_frame, ch_to_plot, sig_ch, fig_title, ax, v_min=-0.022, v_max=0.022):
         from mne.viz import plot_topomap
 
-        mask = np.array([True for _ in range(len(ch_to_plot))])
+        mask = np.array([True if ch in sig_ch else False for ch in ch_to_plot])
 
         locations = pd.read_csv('./channel_2d_location.csv', index_col=0)
         locations = locations.drop(index=["PO8", "PO7"])
@@ -216,12 +251,14 @@ class GraphGenerator:
         mask_params = dict(marker='o', markerfacecolor='w', markeredgecolor='k',
                            linewidth=0, markersize=20)
 
+        # cmap = 'RdBu_r'
+        cmap = 'jet'
         im, cn = plot_topomap(data_frame, locations.loc[ch_to_plot,['x', 'y']].values,
-                              outlines='head', axes=ax, cmap='RdBu_r', show=False,
+                              outlines='head', axes=ax, cmap=cmap, show=False,
                               names=ch_to_plot, show_names=True,
                               mask=mask, mask_params=mask_params,
                               vmin=v_min, vmax=v_max, contours=7)
-        ax.set_title(fig_title, fontsize=15)
+        ax.set_title(fig_title, fontsize=10)
         return im
 
     @staticmethod
@@ -236,7 +273,7 @@ class GraphGenerator:
 
 def main():
 
-    #Bleeding info
+    # #Bleeding info
     # srcPath = Path(r"C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\VeinLigationSimulator-Tests\Juan\11-09-20\S01_T01_Bleeding")
     # start_time, end_time = 290.0, 290.0 + 75
     # task = "UJuan_S01_T01_VeinSutureBleeding_raw"
@@ -264,7 +301,7 @@ def main():
 
     # create Graph generator
     graph_generator = GraphGenerator()
-    topo_graph = graph_generator.update_topo_graph([0.4,0.6,0.5], first_time=True)
+    topo_graph = graph_generator.update_topo_graph_v2(0.5*np.ones(len(EEG_channels)), first_time=True)
 
     #Forward Video to start time
     ts_file["ts_normalize"] = ts_file["ecm_ts"] - ts_file.iloc[0].loc["ecm_ts"]
@@ -281,10 +318,11 @@ def main():
     prev_time = selected_frames.iloc[count]['ecm_ts'] - 0.005
     initial_ts = selected_frames.iloc[count]['ecm_ts']
     total_eeg_pt = 0
-    window_length = 500
-    window_overlap = 250
+    window_length = 250  #500
+    window_overlap = int(0.75*250) #250
+    new_chunk_size = window_length - window_overlap
 
-    feature_fact = feature_factory(2,1)
+    feature_fact = feature_factory(window_length, window_overlap)
 
     try:
         while cap.isOpened():
@@ -304,15 +342,18 @@ def main():
                 # graph_from_signals = graph_generator.update_eeg_graph()  # np.ones((480,640,3))*255
 
                 # Create graph for predictions
-                if total_eeg_pt > window_overlap:
+                if total_eeg_pt >  new_chunk_size:
+
                     print("Make prediction")
-                    new_chunk = graph_generator.eeg_data[:, -total_eeg_pt:][:, 0:window_overlap]
-                    dataPts = feature_fact.make_prediction(new_chunk.transpose())
+                    new_chunk = graph_generator.eeg_data[:, -total_eeg_pt:][:, 0:new_chunk_size]
+                    dataPts, rolling_mean_data = feature_fact.make_prediction(new_chunk.transpose())
                     print(dataPts)
+                    print("prediction array size", len(prediction_array))
 
                     # graph_generator.update_predictions_data(prediction)
-                    topo_graph = graph_generator.update_topo_graph(dataPts)
-                    total_eeg_pt -= window_overlap
+                    # topo_graph = graph_generator.update_topo_graph(dataPts)
+                    topo_graph = graph_generator.update_topo_graph_v2(rolling_mean_data)
+                    total_eeg_pt -= new_chunk_size
 
                     # Debug
                     prediction_array.append(dataPts)

@@ -25,12 +25,19 @@ def main():
 
         raw = loadDataInRaw(path)
 
-        epochs = splitDataIntoEpochs(raw,2.0,1.0)
-        ts, powerbands = calculatePowerBand(epochs,'na',2,'na')
+        window = 1.0
+        overlap = 0.75
+        epochs = splitDataIntoEpochs(raw, window, overlap) #epochs 2s, ovelap 1s: works fine
 
-        # Crop to the specific segment
-        seg = ts.loc[(ts['ts'] > start_times[k]) & (ts['ts'] < start_times[k] + 75)]
-        powerbands = powerbands.loc[seg.index, :]
+        #Crop to the specific segment
+        seg_idx = np.where((epochs.events[:, 0] / 250 > start_times[k]) & (epochs.events[:, 0] / 250 < start_times[k] + 75))[0]
+        epochs = epochs[seg_idx]
+
+        ts, powerbands = calculatePowerBand(epochs,'na',window,'na')
+
+        # # Crop to the specific segment
+        # seg = ts.loc[(ts['ts'] > start_times[k]) & (ts['ts'] < start_times[k] + 75)]
+        # powerbands = powerbands.loc[seg.index, :]
 
         meansFrame = powerbands.loc[:, pd.IndexSlice[:, :]].mean(axis=0)
         for band in POWER_COEFFICIENTS:
@@ -39,12 +46,12 @@ def main():
     means_results = means_results.astype(float)
     difference_between_conditions = means_results.loc["Blood"] - means_results.loc["NoBlood"]
 
-    fig,axes =plt.subplots(1,3)
+    fig,axes =plt.subplots(1,4, figsize=(25,5))
     for a, band in enumerate(POWER_COEFFICIENTS):
         im = create_topo(difference_between_conditions.loc[band],band+" hard-easy",ax=axes[a],v_min=None,v_max=None)
-        create_cbar(fig,im, axes[a])
+        create_cbar(fig,im, axes[a], pad=0.25)
 
-        if a == 2:
+        if a == 3:
             break
     fig.tight_layout()
     fig.tight_layout()

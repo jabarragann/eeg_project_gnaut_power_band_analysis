@@ -10,12 +10,13 @@ def main():
 
     dataNoBlood = np.array(pickle.load(open("./Debug/UJuan_S01_T01_VeinSutureNoBleeding_raw_array_of_pred.pickle","rb")))
 
-    plt.plot(dataBlood[:,0],"-",color="blue", label="Fz",)
-    plt.plot(dataBlood[:,1],"-",color="black", label="T8")
+    fig, axes = plt.subplots(2,1)
+    axes[0].plot(dataBlood[:,0],"-",color="blue", label="Fz",)
+    axes[0].plot(dataNoBlood[:, 0],"--", color="blue", label="Fz")
 
-    plt.plot(dataNoBlood[:, 0],"--", color="blue", label="Fz")
-    plt.plot(dataNoBlood[:, 1],"--", color="black", label="T8")
-    plt.axvline(14)
+    axes[1].plot(dataBlood[:, 1], "-", color="black", label="T8")
+    axes[1].plot(dataNoBlood[:, 1],"--", color="black", label="T8")
+    axes[1].axvline(14)
 
     plt.legend()
     plt.show()
