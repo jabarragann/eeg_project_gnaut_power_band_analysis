@@ -6,9 +6,7 @@ from itertools import product
 import re
 import pandas as pd
 from tensorflow import keras
-from tensorflow.keras.layers import Dense, Input, BatchNormalization, Dropout, Softmax,LSTM, Bidirectional
-from tensorflow.keras.models import Model
-from tensorflow.keras import regularizers
+
 from twilio.rest import Client
 import os
 from tensorflow.keras.utils import to_categorical
@@ -18,15 +16,10 @@ from pathlib import Path
 import traceback
 import copy
 from sklearn.model_selection import train_test_split
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, Activation, Permute, Dropout
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, AveragePooling2D
-from tensorflow.keras.layers import SeparableConv2D, DepthwiseConv2D
-from tensorflow.keras.layers import BatchNormalization
-from tensorflow.keras.layers import SpatialDropout2D
-from tensorflow.keras.regularizers import l1_l2
-from tensorflow.keras.layers  import Input, Flatten
-from tensorflow.keras.constraints import max_norm
+
+
+from PowerClassification.Utils.SpectralImagesUtils import gen_images, createSequencesForLstm
+from PowerClassification.Utils.Networks import NetworkFactoryModule
 
 class Utils:
     @staticmethod
@@ -77,8 +70,15 @@ class DataLoaderModule:
         """
         self.dataFormat = dataFormat
 
-        if self.dataFormat not in ['freq','time']:
-            raise Exception("dataFormat should be either 'freq' or 'time'")
+        if self.dataFormat not in ['freq','time','freq-img']:
+            raise Exception("dataFormat should be either 'freq','freq-img' or 'time'")
+
+        #If you change the default channel location this is going to create a bug!
+        #You use other variables instead of EEG_CHANNELS in the other functions
+        #Load channel locations
+        path = Path(__file__).parent / "mne_channel_2d_location.csv"
+        locs = pd.read_csv(path, index_col=0)
+        self.locs = locs.loc[self.EEG_CHANNELS, :]
 
     def series_to_supervised(self, data, labels, n_in=1, n_out=1, dropnan=True):
         n_vars = 1 if type(data) is list else data.shape[1]
@@ -109,11 +109,13 @@ class DataLoaderModule:
             return self.getDataSplitBySessionTime(datapath, debug)
         elif self.dataFormat == 'freq':
             return self.getDataSplitBySessionFreq(datapath, timesteps, powerBands, eegChannels, debug)
+        elif self.dataFormat == 'freq-img':
+            return self.getDataSplitBySessionFreqImg(datapath, timesteps, powerBands, eegChannels, debug)
 
     def getDataSplitBySessionTime(self, datapath, debug=True):
         """
                 Get a dictionary of all the different EEG in time format sessions found in the datapath. A session is defined as all the data
-                that was collected before the person takes of the sensor.
+                that was collected before the person takes off the sensor.
 
                 :param datapath:
                 :param debug:
@@ -193,6 +195,62 @@ class DataLoaderModule:
             # Set data in LSTM format
             new_X, new_y = self.series_to_supervised(X, y, n_in=(timesteps - 1), n_out=1, dropnan=True)
             new_X = new_X.reshape((new_X.shape[0], timesteps, features))
+            # Append trial to dataset
+            dataContainer[sessId]['X'].append(new_X)
+            dataContainer[sessId]['y'].append(new_y)
+
+        for key, value in dataContainer.items():
+            dataContainer[key]['X'] = np.concatenate(dataContainer[key]['X'])
+            dataContainer[key]['y'] = np.concatenate(dataContainer[key]['y'])
+
+        return dataContainer
+
+    def getDataSplitBySessionFreqImg(self, datapath, timesteps=None, powerBands = None, eegChannels = None, debug = True):
+        """
+        Get a dictionary of all the different data sessions found in the datapath. A session is defined as all the data
+        that was collected before the person takes of the sensor.
+
+        :param datapath:
+        :param timesteps:
+        :param powerBands:
+        :param eegChannels:
+        :return:
+        """
+        if powerBands is None:
+            powerBands = self.POWER_COEFFICIENTS
+        if eegChannels is None:
+            eegChannels = self.EEG_CHANNELS
+
+        # Create data column names - The order is different here than in the other methods
+        # Sort columns [ch1alpha,ch2alpha...,ch1beta, ch2beta,....]
+        modifiedColumns = [y + '-' + x for x, y in product(powerBands,eegChannels)]
+
+        # # Get a list of all the files
+        # files = os.listdir(datapath)
+        datapath = Path(datapath)
+
+        # Create container
+        dataContainer = defaultdict(lambda: defaultdict(list))
+
+        # Read all data files and concatenate them into a single dataframe.
+        for f in datapath.rglob("*.txt"):
+
+            # Get Session
+            sessId = re.findall("S[0-9]_T[0-9]", str(f.name))[0][-4]
+
+            # Get data frame
+            print(f) if debug else None
+
+            d1 = pd.read_csv(f, sep=',', index_col=0)
+
+            # Convert to images
+            label = int(d1['Label'].mean())
+            d1 = d1.loc[:, modifiedColumns]
+            img_tensor = gen_images(self.locs.loc[:, ['x', 'y']].values, d1.values, n_gridpoints=64, normalize=True)
+            # Convert to lstm format
+            new_X = createSequencesForLstm(img_tensor, 10, overlapping_sequences=True, stride=1)
+            new_y = np.zeros(new_X.shape[0]) + label
+
             # Append trial to dataset
             dataContainer[sessId]['X'].append(new_X)
             dataContainer[sessId]['y'].append(new_y)
@@ -289,232 +347,6 @@ class DataLoaderModule:
 
         return firstTrainX, firstTrainY, firstValX, firstValY, logger
 
-class NetworkFactoryModule:
-    @staticmethod
-    def lstm2(timesteps, features):
-        networkInput = Input(shape=(timesteps, features))
-
-        dropout1 = Dropout(rate=0.5)(networkInput)
-        hidden1 = Dense(4, activation='relu')(dropout1)
-        dropout2 = Dropout(rate=0.5)(hidden1)
-        batchNorm1 = BatchNormalization()(dropout2)
-
-        hidden2 = Bidirectional(LSTM(4, stateful=False, dropout=0.5))(batchNorm1)
-        hidden3 = Dense(2, activation='linear')(hidden2)
-        networkOutput = Softmax()(hidden3)
-
-        model1 = Model(inputs=networkInput, outputs=networkOutput)
-        model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-
-        return model1, 'simpleModel'
-
-    @staticmethod
-    def createAdvanceLstmModel(timesteps, features, isBidirectional=True, inputLayerNeurons=64, inputLayerDropout=0.3,
-                               lstmOutputSize=4):
-        timesteps = timesteps
-        features = features
-
-        # Input layer
-        networkInput = Input(shape=(timesteps, features))
-        dropout1 = Dropout(rate=inputLayerDropout)(networkInput)
-
-        # First Hidden layer
-        hidden1 = Dense(inputLayerNeurons, activation='relu')(dropout1)
-        dropout2 = Dropout(rate=0.5)(hidden1)
-        batchNorm1 = BatchNormalization()(dropout2)
-
-        # Choose if the network should be bidirectional
-        if isBidirectional:
-            lstmLayer = LSTM(lstmOutputSize, stateful=False,
-                             dropout=0.5, kernel_regularizer=regularizers.l2(0.05))
-            # hidden2 = Bidirectional( LSTM(lstmSize, stateful=False, dropout=0.5), merge_mode='concat' ) (batchNorm1)
-            hidden2 = Bidirectional(lstmLayer, merge_mode='concat')(batchNorm1)
-        else:
-            hidden2 = LSTM(lstmOutputSize, stateful=False, dropout=0.5)(batchNorm1)
-
-        hidden3 = Dense(2, activation='linear')(hidden2)
-        networkOutput = Softmax()(hidden3)
-
-        model1 = Model(inputs=networkInput, outputs=networkOutput)
-        model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-
-        return model1, 'advanceModel'
-
-    @staticmethod
-    def hyperparameterTunning(timesteps, features, lstmLayers, lstmOutputSize,
-                              isBidirectional, inputLayerNeurons=64, inputLayerDropout=0.3):
-
-        timesteps = int(timesteps)
-        features = int(features)
-        lstmLayers = int(lstmLayers)
-        lstmOutputSize =int(lstmOutputSize)
-        isBidirectional =int(isBidirectional)
-
-        # Input layer
-        networkInput = Input(shape=(int(timesteps), int(features)))
-        dropout1 = Dropout(rate=inputLayerDropout)(networkInput)
-
-        # First Hidden layer
-        hidden1 = Dense(inputLayerNeurons, activation='relu')(dropout1)
-        dropout2 = Dropout(rate=0.5)(hidden1)
-        batchNorm1 = BatchNormalization()(dropout2)
-
-        out = batchNorm1
-        for i in range(1, lstmLayers+1):
-            retSeq = False if i == lstmLayers else True
-            lstmLayer = LSTM(lstmOutputSize, stateful=False, return_sequences=retSeq,
-                             dropout=0.5, kernel_regularizer=regularizers.l2(0.05))
-            if isBidirectional:
-                out = Bidirectional(lstmLayer, merge_mode='concat')(out)
-            else:
-                out = lstmLayer(out)
-
-        hidden3 = Dense(2, activation='linear')(out)
-        networkOutput = Softmax()(hidden3)
-
-        model1 = Model(inputs=networkInput, outputs=networkOutput)
-        model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-
-        return model1
-
-    @staticmethod
-    def experimentingWithLowerDropout(timesteps, features, lstmLayers, lstmOutputSize,
-                              isBidirectional, inputLayerNeurons=64, inputLayerDropout=0.2):
-
-        timesteps = int(timesteps)
-        features = int(features)
-        lstmLayers = int(lstmLayers)
-        lstmOutputSize = int(lstmOutputSize)
-        isBidirectional = int(isBidirectional)
-
-        # Input layer
-        networkInput = Input(shape=(int(timesteps), int(features)))
-        dropout1 = Dropout(rate=inputLayerDropout)(networkInput)
-
-        # First Hidden layer
-        hidden1 = Dense(inputLayerNeurons, activation='relu')(dropout1)
-        dropout2 = Dropout(rate=0.3)(hidden1)
-        batchNorm1 = BatchNormalization()(dropout2)
-
-        out = batchNorm1
-        for i in range(1, lstmLayers + 1):
-            retSeq = False if i == lstmLayers else True
-            lstmLayer = LSTM(lstmOutputSize, stateful=False, return_sequences=retSeq,
-                             dropout=0.3, kernel_regularizer=regularizers.l2(0.05))
-            if isBidirectional:
-                out = Bidirectional(lstmLayer, merge_mode='concat')(out)
-            else:
-                out = lstmLayer(out)
-
-        hidden3 = Dense(2, activation='linear')(out)
-        networkOutput = Softmax()(hidden3)
-
-        model1 = Model(inputs=networkInput, outputs=networkOutput)
-        model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-
-        return model1
-
-    # Timesteps 7.0, features 128.0
-    @staticmethod
-    def bestLstmModel(timesteps, features, lstmLayers=2, lstmOutputSize=4.0,
-                      isBidirectional=1.0, inputLayerNeurons=64, inputLayerDropout=0.3):
-
-        timesteps = int(timesteps)
-        features = int(features)
-        lstmLayers = int(lstmLayers)
-        lstmOutputSize =int(lstmOutputSize)
-        isBidirectional =int(isBidirectional)
-
-        # Input layer
-        networkInput = Input(shape=(int(timesteps), int(features)))
-        dropout1 = Dropout(rate=inputLayerDropout)(networkInput)
-
-        # First Hidden layer
-        hidden1 = Dense(inputLayerNeurons, activation='relu')(dropout1)
-        dropout2 = Dropout(rate=0.5)(hidden1)
-        batchNorm1 = BatchNormalization()(dropout2)
-
-        out = batchNorm1
-        for i in range(1, lstmLayers+1):
-            retSeq = False if i == lstmLayers else True
-            lstmLayer = LSTM(lstmOutputSize, stateful=False, return_sequences=retSeq,
-                             dropout=0.5, kernel_regularizer=regularizers.l2(0.05))
-            if isBidirectional:
-                out = Bidirectional(lstmLayer, merge_mode='concat')(out)
-            else:
-                out = lstmLayer(out)
-
-        hidden3 = Dense(2, activation='linear')(out)
-        networkOutput = Softmax()(hidden3)
-
-        model1 = Model(inputs=networkInput, outputs=networkOutput)
-        model1.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-
-        return model1, 'bestModel'
-
-    @staticmethod
-    def EEGNet(nb_classes, Chans=32, Samples=128,
-               dropoutRate=0.5, kernLength=int(64 / 2), F1=8,
-               D=2, F2=16, norm_rate=0.25, dropoutType='Dropout'):
-        """ Keras Implementation of EEGNet
-        http://iopscience.iop.org/article/10.1088/1741-2552/aace8c/meta
-
-          nb_classes      : int, number of classes to classify
-          Chans, Samples  : number of channels and time points in the EEG data
-          dropoutRate     : dropout fraction
-          kernLength      : length of temporal convolution in first layer. We found
-                            that setting this to be half the sampling rate worked
-                            well in practice. For the SMR dataset in particular
-                            since the data was high-passed at 4Hz we used a kernel
-                            length of 32.
-          F1, F2          : number of temporal filters (F1) and number of pointwise
-                            filters (F2) to learn. Default: F1 = 8, F2 = F1 * D.
-          D               : number of spatial filters to learn within each temporal
-                            convolution. Default: D = 2
-          dropoutType     : Either SpatialDropout2D or Dropout, passed as a string.
-        """
-        K.set_image_data_format('channels_first')
-
-        if dropoutType == 'SpatialDropout2D':
-            dropoutType = SpatialDropout2D
-        elif dropoutType == 'Dropout':
-            dropoutType = Dropout
-        else:
-            raise ValueError('dropoutType must be one of SpatialDropout2D '
-                             'or Dropout, passed as a string.')
-
-        input1 = Input(shape=(1, Chans, Samples))
-
-        ##################################################################
-        block1 = Conv2D(F1, (1, kernLength), padding='same',
-                        input_shape=(1, Chans, Samples),
-                        use_bias=False)(input1)
-        block1 = BatchNormalization(axis=1)(block1)
-        block1 = DepthwiseConv2D((Chans, 1), use_bias=False,
-                                 depth_multiplier=D,
-                                 depthwise_constraint=max_norm(1.))(block1)
-        block1 = BatchNormalization(axis=1)(block1)
-        block1 = Activation('elu')(block1)
-        block1 = AveragePooling2D((1, 4))(block1)
-        block1 = dropoutType(dropoutRate)(block1)
-
-        block2 = SeparableConv2D(F2, (1, 16),
-                                 use_bias=False, padding='same')(block1)
-        block2 = BatchNormalization(axis=1)(block2)
-        block2 = Activation('elu')(block2)
-        block2 = AveragePooling2D((1, 8))(block2)
-        block2 = dropoutType(dropoutRate)(block2)
-
-        flatten = Flatten(name='flatten')(block2)
-
-        dense = Dense(nb_classes, name='dense',
-                      kernel_constraint=max_norm(norm_rate))(flatten)
-        softmax = Activation('softmax', name='softmax')(dense)
-
-        model = Model(inputs=input1, outputs=softmax)
-        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['acc'])
-
-        return model, 'EEGnet'
 
 class NetworkTrainingModule:
 
@@ -875,7 +707,7 @@ class CrossValidationRoutines:
                     model,modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
 
                 trainX = (trainX - globalMean) / (globalStd + 1e-18)
-                valX = (valX - globalMean) / (globalStd + 1e-18)
+                valX  = (valX - globalMean) / (globalStd + 1e-18)
                 testX = (testX - globalMean) / (globalStd + 1e-18)
 
                 history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY, testX, testY,
