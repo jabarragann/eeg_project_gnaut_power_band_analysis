@@ -9,7 +9,7 @@ from tensorflow.keras.layers  import Input, Flatten
 from tensorflow.keras.constraints import max_norm
 from tensorflow.keras.layers import Dense, Input, BatchNormalization, Dropout, Softmax,LSTM, Bidirectional,TimeDistributed
 from tensorflow.keras.models import Model
-from tensorflow.keras import regularizers
+from tensorflow.keras import regularizers, optimizers
 import tensorflow.keras as keras
 from tensorflow.keras import backend as K
 
@@ -242,35 +242,106 @@ class NetworkFactoryModule:
 
     @staticmethod
     def createConvLstmModel(input_shape, num_classes):
+        lstm_drop = 0.30
+        input_drop = 0.05
+        other_drop = 0.10
+
         networkInput = Input(shape=input_shape)
 
-        #     model.add(TimeDistributed(Conv2D(8, (3, 3), padding='same')))
-        # #     model.add(Dropout(rate=0.3))
-        #     model.add(TimeDistributed(Activation('relu')))
-        #     model.add(Dropout(rate=0.3))
         x = TimeDistributed(Conv2D(16, (3, 3)))(networkInput)
+        # x = TimeDistributed(BatchNormalization()) (x)
         x = TimeDistributed(Activation('relu'))(x)
-        x = TimeDistributed(MaxPooling2D(pool_size=(2, 2))) (x)
-        #     model.add(Dropout(0.25))
+        x = TimeDistributed(MaxPooling2D(pool_size=(2, 2)))(x)
+        x = TimeDistributed(Dropout(other_drop))(x)
 
         x = TimeDistributed(Flatten())(x)
         x = TimeDistributed(Dense(45))(x)
         x = TimeDistributed(Activation('relu'))(x)
-        # model.add(Dropout(0.5))
+        x = TimeDistributed(Dropout(other_drop))(x)
 
         # LSTM layer
-        x = Bidirectional(LSTM(20, stateful=False, dropout=0.35))(x)
+        x = Bidirectional(LSTM(20, stateful=False, dropout=lstm_drop))(x)
 
         x = Dense(num_classes)(x)
         networkOutput = Activation('softmax')(x)
 
         model = Model(inputs=networkInput, outputs=networkOutput)
         # initiate RMSprop optimizer
-        opt = keras.optimizers.RMSprop(lr=0.0001, decay=1e-6)
+        opt = optimizers.RMSprop(lr=0.0001, decay=1e-6)
 
         # Let's train the model using RMSprop
         model.compile(loss='categorical_crossentropy',
                       optimizer=opt,
-                      metrics=['accuracy'])
+                      metrics=['acc'])  # metrics=['accuracy']
 
         return model, "convolutional lstm"
+
+    def createVainillaNN(self, input_shape):
+        model_input = Input(input_shape)
+        x = Dense(256)(model_input)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.2) (x)
+
+        x = Dense(128)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.2) (x)
+
+        x = Dense(10)(x)
+        x = BatchNormalization()(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.2) (x)
+
+        x = Dense(2)(x)
+        model_output = Activation('softmax')(x)
+
+        model = Model(inputs=model_input, outputs=model_output)
+        # initiate RMSprop optimizer
+        opt = optimizers.RMSprop(lr=0.0001, decay=1e-6)
+
+        # Let's train the model using RMSprop
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=opt,
+                      metrics=['acc'])  # metrics=['accuracy']
+
+        return model, "vainilla nn"
+
+    # def createConvLstmModel(input_shape, num_classes):
+    #     networkInput = Input(shape=input_shape)
+    #
+    #     #     model.add(TimeDistributed(Conv2D(8, (3, 3), padding='same')))
+    #     # #     model.add(Dropout(rate=0.3))
+    #     #     model.add(TimeDistributed(Activation('relu')))
+    #     #     model.add(Dropout(rate=0.3))
+    #     x = TimeDistributed(Conv2D(16, (3, 3)))(networkInput)
+    #     x = TimeDistributed(Activation('relu'))(x)
+    #     x = TimeDistributed(MaxPooling2D(pool_size=(2, 2))) (x)
+    #     #     model.add(Dropout(0.25))
+    #
+    #     x = TimeDistributed(Flatten())(x)
+    #     x = TimeDistributed(Dense(45))(x)
+    #     x = TimeDistributed(Activation('relu'))(x)
+    #     # model.add(Dropout(0.5))
+    #
+    #     # LSTM layer
+    #     x = Bidirectional(LSTM(20, stateful=False, dropout=0.35))(x)
+    #
+    #     x = Dense(num_classes)(x)
+    #     networkOutput = Activation('softmax')(x)
+    #
+    #     model = Model(inputs=networkInput, outputs=networkOutput)
+    #     # initiate RMSprop optimizer
+    #     opt = keras.optimizers.RMSprop(lr=0.0001, decay=1e-6)
+    #
+    #     # Let's train the model using RMSprop
+    #     model.compile(loss='categorical_crossentropy',
+    #                   optimizer=opt,
+    #                   metrics=['accuracy'])
+    #
+    #     return model, "convolutional lstm"
+
+if __name__ == "__main__":
+    fact = NetworkFactoryModule()
+    nn, _ = fact.createVainillaNN((120))
+    nn.summary()

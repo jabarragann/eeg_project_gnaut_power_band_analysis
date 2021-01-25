@@ -1,3 +1,5 @@
+import os
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 import pickle
 import matplotlib.pyplot as plt
 import numpy as np
@@ -70,8 +72,8 @@ class DataLoaderModule:
         """
         self.dataFormat = dataFormat
 
-        if self.dataFormat not in ['freq','time','freq-img']:
-            raise Exception("dataFormat should be either 'freq','freq-img' or 'time'")
+        if self.dataFormat not in ['freq','time','freq-img','average-coefficients']:
+            raise Exception("dataFormat should be either 'freq', 'average-coefficients','freq-img' or 'time'")
 
         #If you change the default channel location this is going to create a bug!
         #You use other variables instead of EEG_CHANNELS in the other functions
@@ -111,6 +113,8 @@ class DataLoaderModule:
             return self.getDataSplitBySessionFreq(datapath, timesteps, powerBands, eegChannels, debug)
         elif self.dataFormat == 'freq-img':
             return self.getDataSplitBySessionFreqImg(datapath, timesteps, powerBands, eegChannels, debug)
+        elif self.dataFormat == 'average-coefficients':
+            return self.getDataSplitBySessionAverageCoeff(datapath, timesteps, powerBands, eegChannels, debug)
 
     def getDataSplitBySessionTime(self, datapath, debug=True):
         """
@@ -150,6 +154,12 @@ class DataLoaderModule:
             dataContainer[key]['y'] = np.concatenate(dataContainer[key]['y'])
 
         return dataContainer
+
+    def getDataSplitBySessionAverageCoeff(self, datapath, timesteps=None, powerBands = None, eegChannels = None, debug = True):
+        container = self.getDataSplitBySessionFreq(datapath, timesteps, powerBands, eegChannels, debug)
+        for k in container.keys():
+            container[k]['X'] = container[k]['X'].mean(axis=1)
+        return container
 
     def getDataSplitBySessionFreq(self, datapath, timesteps=None, powerBands = None, eegChannels = None, debug = True):
         """
@@ -246,9 +256,10 @@ class DataLoaderModule:
             # Convert to images
             label = int(d1['Label'].mean())
             d1 = d1.loc[:, modifiedColumns]
-            img_tensor = gen_images(self.locs.loc[:, ['x', 'y']].values, d1.values, n_gridpoints=64, normalize=True)
+            img_tensor = gen_images(self.locs.loc[:, ['x', 'y']].values, d1.values, n_gridpoints=32, normalize=True)
             # Convert to lstm format
-            new_X = createSequencesForLstm(img_tensor, 10, overlapping_sequences=True, stride=1)
+            new_X = createSequencesForLstm(img_tensor, timesteps, overlapping_sequences=True, stride=1)
+            new_X = new_X.astype(np.float32)
             new_y = np.zeros(new_X.shape[0]) + label
 
             # Append trial to dataset
@@ -446,7 +457,7 @@ class NetworkTrainingModule:
     # Auxiliary classes
     class EarlyStoppingCallback(keras.callbacks.Callback):
         def __init__(self, modelNumber, additionalValSet=None):
-            self.patience = 100
+            self.patience = 60
             self.stoppingCounter = 0
             self.maxValidationAcc = 0.0
             self.epochOfMaxValidation = -1
@@ -624,26 +635,13 @@ class CrossValidationRoutines:
         :return:
         """
 
-        dataLoaderModule = DataLoaderModule(dataFormat=dataFormat)
-        trainingModule = NetworkTrainingModule()
-        factoryModule = NetworkFactoryModule()
         resultsContainer = []
-
-        testUserContainer = dataLoaderModule.getDataSplitBySession(dataPath / testUser, timesteps=lstmSteps,
-                                                                   eegChannels=eegChannels,
-                                                                   powerBands=powerCoefficients)
-
-        # Initially remove testing user from training and create train set without him
-        trainingUsers = copy.copy(listOfUsers)
-        trainingUsers.remove(testUser)
-
-        #Load train and validation sets
-        r1 = dataLoaderModule.createTrainAndValFromTrainUsers(trainingUsers,dataPath=dataPath,
-                                                               timesteps=lstmSteps,
-                                                               eegChannels=eegChannels,
-                                                               powerBands=powerCoefficients)
-
-        firstTrainX, firstTrainY, firstValX, firstValY, logger = r1
+        f1 = CrossValidationRoutines.getTestContainerAndTrainValSets
+        testUserContainer, firstTrainX, firstTrainY, firstValX, firstValY = f1(lstmSteps, dataPath, testUser,
+                                                                               listOfUsers,
+                                                                               eegChannels=eegChannels,
+                                                                               powerCoefficients=powerCoefficients,
+                                                                               dataFormat=dataFormat)
         try:
             # Iterate over all the sessions of the testing user
             # Use one session for the test set and one for validation and the rest for training
@@ -651,8 +649,7 @@ class CrossValidationRoutines:
             # Transform default dict to dict to avoid modifications of the container
             testUserContainer = dict(testUserContainer)
 
-            for testingKey in testUserContainer.keys():
-
+            for testingKey in list(testUserContainer.keys())[2:]:
                 # copy data from the other users
                 trainX = copy.copy(firstTrainX)
                 trainY = copy.copy(firstTrainY)
@@ -665,7 +662,6 @@ class CrossValidationRoutines:
                 validationSession = random.choice(availableSessions)
                 availableSessions.remove(validationSession)
 
-
                 # Add randomly sampled session to the validation set
                 valX.append(testUserContainer[validationSession]['X'])
                 valY.append(testUserContainer[validationSession]['y'])
@@ -676,64 +672,18 @@ class CrossValidationRoutines:
                         trainX.append(testUserContainer[j]['X'])
                         trainY.append(testUserContainer[j]['y'])
 
+                #######################################################
                 # Concatenate all sessions for validation and training
-                trainX = np.concatenate(trainX)
-                trainY = np.concatenate(trainY)
-                valX = np.concatenate(valX)
-                valY = np.concatenate(valY)
+                trainX = np.concatenate(trainX); trainY = np.concatenate(trainY)
+                valX = np.concatenate(valX); valY = np.concatenate(valY)
+                testX = testUserContainer[testingKey]['X']; testY = testUserContainer[testingKey]['y']
 
-                testX = testUserContainer[testingKey]['X']
-                testY = testUserContainer[testingKey]['y']
+                #########################
+                meta_data = {'plotPath':plotPath, 'testUser':testUser,'testingKey':testingKey,'validationSession':validationSession}
+                df1 = CrossValidationRoutines.train_evaluate((trainX,trainY),(valX,valY),(testX,testY),
+                                                             dataFormat=dataFormat, meta_data=meta_data)
 
-                # Convert labels to one-hot encoding
-                trainY = to_categorical(trainY)
-                testY = to_categorical(testY)
-                valY = to_categorical(valY)
-
-
-                # Train Model- Create LSTM model or CCN model depending on data format.
-                # Normalize data accordingly to the format also
-                if dataFormat == 'freq':
-                    # Normalize data - with training set parameters
-                    globalMean = trainX.mean(axis=(0, 1))
-                    globalStd = trainX.std(axis=(0, 1))
-                    #Create model
-                    model,modelName = factoryModule.bestLstmModel(*(trainX.shape[1], trainX.shape[2]))
-                elif dataFormat == 'time':
-                    # Normalize data - with training set parameters
-                    globalMean = trainX.mean(axis=(0,3)).reshape((1,32,1))
-                    globalStd = trainX.std(axis=(0,3)).reshape((1,32,1))
-                    #Create model
-                    model,modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
-
-                trainX = (trainX - globalMean) / (globalStd + 1e-18)
-                valX  = (valX - globalMean) / (globalStd + 1e-18)
-                testX = (testX - globalMean) / (globalStd + 1e-18)
-
-                history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY, testX, testY,
-                                                                                   epochs=700, verbose=1)
-
-                evalTrain = model.evaluate(trainX, trainY,verbose=0)[1]
-                evalValidation = model.evaluate(valX, valY, verbose=0)[1]
-                evalTest = model.evaluate(testX, testY,verbose=1)[1]
-                K.clear_session()
-
-
-                # Plot results
-                plotTitle = '{:}_test{:}_validation{:}'.format(testUser, testingKey, validationSession)
-                completePlotPath = plotPath / plotTitle
-                trainingModule.createPlot(history,plotTitle,completePlotPath,earlyStopCallBack=earlyStopping)
-
-
-                # Save all the results
-                data = {testingKey: [testUser, modelName,
-                                     testingKey, validationSession,
-                                     evalTrain, evalValidation, evalTest, ]}
-
-                df1 = pd.DataFrame.from_dict(data, orient='index',
-                                             columns=['User', 'ModelName', 'TestSession', 'ValidationSession', 'TrainAcc',
-                                                      'ValidationAcc', 'TestAcc', ])
-
+                ###################################################################
                 resultsContainer.append(df1)
 
         except Exception as e:
@@ -744,6 +694,225 @@ class CrossValidationRoutines:
         finally:
             return pd.concat(resultsContainer)
 
+    @staticmethod
+    def userCrossValidationMultiUserSimplified(lstmSteps, dataPath, plotPath, testUser, listOfUsers, eegChannels=None,
+                                     powerCoefficients=None, dataFormat='freq'):
+        """
+        Designed only for 4 sessions only!!
+
+        userCrossValidationMultiUser will perform the crossvalidation process of a model. The main difference
+        between userCrossValidation is that training data from multiple user will be added to the training and
+        validation sets with the following procedure.
+
+        1)Only data from one user will be in the testing set.
+        2)The testing set will be a single session from the testing user.
+        3)Another session of the testing user is added to the validation set.
+        4)The rest of the sessions of the testing user go to the training set.
+
+        Training and validation have data from multiple users.
+        :param dataFormat: should be 'freq' if powerbands and lstm are going to be use for classification. Or 'time' if cnn with time data is going to be use.
+        :param powerCoefficients: This parameter could be either None to use all the available power coefficients
+         or a list of the coefficients that should be included in the data.
+        :param eegChannels: This parameter could be either None to use all the available EEG channels
+         or a list of the channels that should be included in the data.
+        :param lstmSteps:
+        :param dataPath:
+        :param plotPath:
+        :param testUser:
+        :param listOfUsers:
+        :return:
+        """
+        resultsContainer = []
+        f1 = CrossValidationRoutines.getTestContainerAndTrainValSets
+        testUserContainer, firstTrainX, firstTrainY, firstValX, firstValY = f1(lstmSteps,dataPath,testUser,listOfUsers,
+                                                                                eegChannels=eegChannels,
+                                                                                powerCoefficients=powerCoefficients,
+                                                                                dataFormat=dataFormat)
+        try:
+            # Iterate over all the sessions of the testing user
+            # Use one session for the test set and one for validation and the rest for training
+
+            # Transform default dict to dict to avoid modifications of the container
+            testUserContainer = dict(testUserContainer)
+
+            trainingKeys = list(testUserContainer.keys())[:2]
+            testingKeys = list(testUserContainer.keys())[2:]
+
+
+            for testKey in testingKeys:
+                # copy data from the other users
+                trainX = copy.copy(firstTrainX)
+                trainY = copy.copy(firstTrainY)
+                valX = copy.copy(firstValX)
+                valY = copy.copy(firstValY)
+
+                availableSessions = list(testUserContainer.keys())
+
+                #Create test
+                testX = [testUserContainer[testKey]['X']]
+                testY = [testUserContainer[testKey]['y']]
+                availableSessions.remove(testKey)
+
+                #Create train
+                for k in trainingKeys:
+                    availableSessions.remove(k)
+                    trainX.append(testUserContainer[k]['X'])
+                    trainY.append(testUserContainer[k]['y'])
+
+                #Create val
+                validationSession = copy.copy(availableSessions)
+                for k in validationSession:
+                    availableSessions.remove(k)
+                    valX.append(testUserContainer[k]['X'])
+                    valY.append(testUserContainer[k]['y'])
+
+                assert availableSessions == [], "check logic"
+
+                #######################################################
+                # Concatenate all sessions for validation and training
+                trainX = np.concatenate(trainX)
+                trainY = np.concatenate(trainY)
+                valX = np.concatenate(valX)
+                valY = np.concatenate(valY)
+                testX = np.concatenate(testX)
+                testY = np.concatenate(testY)
+
+                #########################
+                meta_data = {'plotPath': plotPath, 'testUser': testUser, 'testKey': testKey,
+                             'valKey': validationSession, 'trainKey': trainingKeys}
+                df1 = CrossValidationRoutines.train_evaluate((trainX, trainY), (valX, valY), (testX, testY),
+                                                             dataFormat=dataFormat, meta_data=meta_data)
+
+                ###################################################################
+                resultsContainer.append(df1)
+
+        except Exception as e:
+            print("ERROR!!!!!!!!!!!!!!!!!!!")
+            print(e)
+            traceback.print_exc()
+
+        finally:
+            return pd.concat(resultsContainer)
+
+    @staticmethod
+    def getTestContainerAndTrainValSets(lstmSteps, dataPath, testUser, listOfUsers, eegChannels=None,
+                                               powerCoefficients=None, dataFormat='freq'):
+        """
+        Get data from test user and a training and validation sets from the rest
+        Training and validation have data from multiple users.
+        :param dataFormat: should be 'freq' if powerbands and lstm are going to be use for classification. Or 'time' if cnn with time data is going to be use.
+        :param powerCoefficients: This parameter could be either None to use all the available power coefficients
+         or a list of the coefficients that should be included in the data.
+        :param eegChannels: This parameter could be either None to use all the available EEG channels
+         or a list of the channels that should be included in the data.
+        :param lstmSteps:
+        :param dataPath:
+        :param testUser:
+        :param listOfUsers:
+        :return: testUserContainer (dict), firstTrainX, firstTrainY, firstValX, firstValY
+        """
+        dataLoaderModule = DataLoaderModule(dataFormat=dataFormat)
+        testUserContainer = dataLoaderModule.getDataSplitBySession(dataPath / testUser, timesteps=lstmSteps,
+                                                                   eegChannels=eegChannels,
+                                                                   powerBands=powerCoefficients)
+        # Initially remove testing user from training and create train set without him
+        trainingUsers = copy.copy(listOfUsers)
+        trainingUsers.remove(testUser)
+
+        # Load train and validation sets
+        r1 = dataLoaderModule.createTrainAndValFromTrainUsers(trainingUsers, dataPath=dataPath,
+                                                              timesteps=lstmSteps,
+                                                              eegChannels=eegChannels,
+                                                              powerBands=powerCoefficients)
+
+        firstTrainX, firstTrainY, firstValX, firstValY, logger = r1
+
+        return testUserContainer, firstTrainX, firstTrainY, firstValX, firstValY
+
+    @staticmethod
+    def train_evaluate(train_xy, val_xy, test_xy, dataFormat, meta_data):
+        """
+        Given the train, val, and test set train model and record accuracies in a dataframe
+
+        :param dataFormat:
+        :param train_xy:
+        :param val_xy:
+        :param test_xy:
+        :param meta_data:
+        :return: dataframe with accuracy on train, val, and test sets.
+        """
+        epochs = 700
+        trainingModule = NetworkTrainingModule()
+        factoryModule = NetworkFactoryModule()
+
+        trainX,trainY = train_xy
+        valX, valY = val_xy
+        testX, testY = test_xy
+
+        # Convert labels to one-hot encoding
+        trainY = to_categorical(trainY)
+        testY = to_categorical(testY)
+        valY = to_categorical(valY)
+
+        # Train Model- Create LSTM model or CCN model depending on data format.
+        # Normalize data accordingly to the format also
+        globalMean, globalStd = None, None
+        if dataFormat == 'freq':
+            # Normalize data - with training set parameters
+            globalMean = trainX.mean(axis=(0, 1))
+            globalStd = trainX.std(axis=(0, 1))
+            # Create model
+            model, modelName = factoryModule.bestLstmModel(*(trainX.shape[1], trainX.shape[2]))
+        elif dataFormat == 'time':
+            # Normalize data - with training set parameters
+            globalMean = trainX.mean(axis=(0, 3)).reshape((1, 32, 1))
+            globalStd = trainX.std(axis=(0, 3)).reshape((1, 32, 1))
+            # Create model
+            model, modelName = factoryModule.EEGNet(2, Samples=trainX.shape[3])
+        elif dataFormat == 'freq-img':
+            model, modelName = factoryModule.createConvLstmModel((trainX.shape[1], 32, 32, 4), 2)
+            globalMean = 0
+            globalStd = 1
+        elif dataFormat == 'average-coefficients':
+            model, modelName = factoryModule.createVainillaNN((trainX.shape[1]))
+            globalMean = trainX.mean(axis=0).reshape(1,-1)
+            globalStd = trainX.std(axis=0).reshape(1,-1)
+
+
+        trainX = (trainX - globalMean) / (globalStd + 1e-18)
+        valX = (valX - globalMean) / (globalStd + 1e-18)
+        testX = (testX - globalMean) / (globalStd + 1e-18)
+
+        history, model, earlyStopping = trainingModule.trainModelEarlyStop(model, trainX, trainY, valX, valY, testX,
+                                                                           testY,
+                                                                           epochs=epochs, verbose=1)
+
+        evalTrain = model.evaluate(trainX, trainY, verbose=0)[1]
+        evalValidation = model.evaluate(valX, valY, verbose=0)[1]
+        evalTest = model.evaluate(testX, testY, verbose=1)[1]
+        K.clear_session()
+
+        # Plot results
+        plotPath = meta_data['plotPath']
+        testUser = meta_data['testUser']
+        trainKey = meta_data['trainKey']
+        valKey = meta_data['valKey']
+        testKey = meta_data['testKey']
+
+        plotTitle = '{:}_train{:}_validation{:}_test{:}'.format(testUser,trainKey,valKey, testKey)
+        completePlotPath = plotPath / plotTitle
+        trainingModule.createPlot(history, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping)
+
+        # Save all the results
+        data = {str(testKey): [testUser, modelName,
+                             str(testKey), valKey,
+                             evalTrain, evalValidation, evalTest, ]}
+
+        df1 = pd.DataFrame.from_dict(data, orient='index',
+                                     columns=['User', 'ModelName', 'TestSession', 'ValidationSession', 'TrainAcc',
+                                              'ValidationAcc', 'TestAcc', ])
+
+        return df1
 
 class TransferLearningModule:
     """
@@ -928,7 +1097,7 @@ class TransferLearningModule:
                                                                                                verbose=0)
 
                     #Plot training history
-                    plotTitle = '{:}_test{:}_PercentageOfTraining{:0.2%}_'.format(testUser, testingKey, (1/8) * i)
+                    plotTitle = '{:}_test{:}_PercentageOfTraining{:0.2%}_'.format(testUser, str(testingKey), (1/8) * i)
                     completePlotPath = plotPath / plotTitle
                     trainingModule.createPlot(transferHistory, plotTitle, completePlotPath, earlyStopCallBack=earlyStopping)
 
