@@ -29,21 +29,21 @@ def get_file_information(file):
 def split_eeg_into_epochs(eeg_df,ts_events):
     eeg_epochs = []
     eeg_ts = []
-    for ts in ts_events:
+    for idx, ts in enumerate(ts_events):
         e = eeg_df.loc[ (eeg_df['LSL_TIME']>ts-12.5) & (eeg_df['LSL_TIME']<ts+12.5)  ]
         if e.shape[0]>6000:
             eeg_epochs.append(e[EEG_channels].values[:6000,:])
             eeg_ts.append(ts)
         else:
-            print("epoch has not enough data", e.shape)
+            print("epoch {:d} has not enough data".format(idx), e.shape)
 
     eeg_epochs = np.array(eeg_epochs)
 
     return eeg_epochs, eeg_ts
 
 def main():
-    eye_tracker_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\eyetracker\Keyu\S1-validation')
-    eeg_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\edf\Keyu\S1-validation')
+    eye_tracker_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\eyetracker\Jing\S5-validation')
+    eeg_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\txt\Jing\S5-validation')
     labels = ['NeedlePassing', 'BloodNeedle']
 
     files_dict_paths = dict(etu.search_files_on_path(eye_tracker_path))
@@ -55,6 +55,7 @@ def main():
         information = get_file_information(files_dict_paths[key]['left'])
 
         eye_x, eye_y, ts_events = etu.get_data_single_file(eye_df)
+        print("eye tracker shape", eye_x.shape)
 
         #Load corresponding eeg file
         eeg_file = '{:}_S{:02d}_T{:02d}_{:}_raw.txt'.format(information['uid'], information['session'],information['trial'], information['task'])

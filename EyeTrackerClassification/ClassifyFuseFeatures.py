@@ -27,10 +27,11 @@ def load_files(path,labels):
         trial = int(re.findall('(?<=_S[0-9]{2}_T)[0-9]{2}(?=_)', file.name)[0])
         label = 1.0 if labels[1]==task else 0.0
         print(file.name,task,label)
-        df = pd.read_csv(file,index_col=[0])
-        y = np.ones(df.shape[0]) * label
-        files_dict[trial] = {'X':df.drop('LSL_TIME',axis=1).values,'y':y}
+        X = pd.read_csv(file,index_col=[0])
+        y = np.ones(X.shape[0]) * label
+        files_dict[trial] = {'X':X.drop('LSL_TIME',axis=1).values,'y':y}
 
+        assert X.shape[0] == y.shape[0], "Dimension error in file {:}".format(file.name)
     return files_dict
 
 def merge_files(files_dict):
@@ -41,21 +42,28 @@ def merge_files(files_dict):
     return np.concatenate(X), np.concatenate(y)
 
 def main():
-    path = Path(r"C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\fusefeatures\UKeyu\S01")
+    path1 = Path(r"C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\fusefeatures\UJing\S02")
+    # path2 = Path(r"C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\fusefeatures\UJuan\S07")
+    # path3 = Path(r"C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\fusefeatures\UKeyu\S01")
+
     labels = ['NeedlePassing', 'BloodNeedle']
 
-    files_dict = load_files(path,labels)
-
+    files_dict1 = load_files(path1,labels)
+    # files_dict2 = load_files(path2,labels)
+    # files2 = [[files_dict2[key]['X'], files_dict2[key]['y']] for key in files_dict2.keys()]
+    # files_dict3 = load_files(path3, labels)
+    # files3 = [[files_dict3[key]['X'], files_dict3[key]['y']] for key in files_dict3.keys()]
+    # files_other_u = files2+files3
 
     #split into train val
     for valList in [[1,2],[3,4],[5,6],[7,8],[9,10]]:
+        # break
+        train_files = [ [ files_dict1[key]['X'],files_dict1[key]['y']] for key in files_dict1.keys() if key not in valList]
+        val_files = [ [ files_dict1[key]['X'],files_dict1[key]['y']] for key in files_dict1.keys() if key in valList]
 
-        train_files = [ [ files_dict[key]['X'],files_dict[key]['y']] for key in files_dict.keys() if key not in valList]
-        val_files = [ [ files_dict[key]['X'],files_dict[key]['y']] for key in files_dict.keys() if key in valList]
-
-        train_x, train_y = merge_files(train_files)
+        # train_x, train_y = merge_files(train_files+files_other_u) #Multiuser
+        train_x, train_y = merge_files(train_files) #Single user
         val_x, val_y = merge_files(val_files)
-
 
         #Normalize
         global_mean = train_x.mean(axis=0).reshape(1,10)
@@ -95,9 +103,10 @@ def main():
     ##############################
     # Train a model with all data#
     ##############################
-    train_files = [[files_dict[key]['X'], files_dict[key]['y']] for key in files_dict.keys()]
+    train_files1 = [[files_dict1[key]['X'], files_dict1[key]['y']] for key in files_dict1.keys()]
 
-    train_x, train_y = merge_files(train_files)
+    # train_x, train_y = merge_files(train_files1 + files2 + files3) #Multiuser
+    train_x, train_y = merge_files(train_files1) #Single user
 
     # Normalize
     global_mean = train_x.mean(axis=0).reshape(1, 10)
@@ -112,7 +121,7 @@ def main():
                         epochs=120,
                         shuffle=True,
                         verbose=True)
-    user='keyu'
+    user='Jing'
     model.save('./model/model_{:}_fuse.h5'.format(user))
     normalizer = {'mean':global_mean,'std':global_std}
     pickle.dump(normalizer, open('./model/normalizer_{:}_fuse.pic'.format(user),'wb'))

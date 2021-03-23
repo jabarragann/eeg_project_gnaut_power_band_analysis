@@ -199,7 +199,7 @@ def split_into_epochs(df):
     while event[-1] < df['NORMAL_TIME'].values[-1]:
         e = df.loc[(df['NORMAL_TIME'] > count-12.5) & (df['NORMAL_TIME'] < count+12.5)]
         epochs.append(e)
-        count += 6 # 12.5
+        count += 1 #6 # 12.5
         event.append(count)
     event_ts = np.array(event) + df['LSL_TIME'].values[0]
 
