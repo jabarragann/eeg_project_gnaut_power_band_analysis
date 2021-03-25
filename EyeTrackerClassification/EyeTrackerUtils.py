@@ -139,7 +139,7 @@ def search_files_on_path(path):
     for file in path.rglob("*.txt"):
         print(file.name)
         trial = int(re.findall('(?<=_S[0-9]{2}_T)[0-9]{2}(?=_)', file.name)[0])
-        f_type = re.findall('(?<=_)[[a-zA-Z]+(?=.txt)', file.name)[0]
+        f_type = re.findall('(?<=_)[a-zA-Z]+(?=.txt)', file.name)[0]
 
         print(trial, f_type)
 
@@ -161,9 +161,9 @@ def get_data(files):
     results = pd.concat(results)
     return results.iloc[:,:-1], results.iloc[:,-1]
 
-def get_data_single_file(df):
+def get_data_single_file(df, window_size=None):
     results = []
-    epochs, events_ts = split_into_epochs(df)
+    epochs, events_ts = split_into_epochs(df, window_size=window_size)
     for i in range(len(epochs) - 1):
         e = epochs[i]
         r = create_feature(e)
@@ -191,16 +191,26 @@ def create_feature(df):
                            ,columns=["number_of_fix","average_fix","ssp","nni_value"])
     return results
 
-def split_into_epochs(df):
+def split_into_epochs(df, sliding_window_step=4, window_size=15):
+    """
+    Create epochs from a list of events. Following the mne procedure to create epochs,
+    a window is centered at each event and the duration is defined by the window_size parameter.
+    Each window will include data from the following interval [ts-window_size/2,ts+window_size/2,]
+
+    :param df:
+    :param sliding_window_step:
+    :param window_size:
+    :return:
+    """
     df['NORMAL_TIME'] = df['LSL_TIME'] - df['LSL_TIME'].values[0]
-    event = [12.5]
-    count = 12.5
+    event = [2.5]
+    current_event = event[0]
     epochs = []
     while event[-1] < df['NORMAL_TIME'].values[-1]:
-        e = df.loc[(df['NORMAL_TIME'] > count-12.5) & (df['NORMAL_TIME'] < count+12.5)]
+        e = df.loc[(df['NORMAL_TIME'] > current_event-window_size/2) & (df['NORMAL_TIME'] < current_event+window_size/2)]
         epochs.append(e)
-        count += 1 #6 # 12.5
-        event.append(count)
+        current_event += sliding_window_step #4 #1 #6 # 12.5
+        event.append(current_event)
     event_ts = np.array(event) + df['LSL_TIME'].values[0]
 
     return epochs, event_ts[:-1]

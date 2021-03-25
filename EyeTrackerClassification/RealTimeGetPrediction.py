@@ -13,8 +13,8 @@ def main():
     files_dict = etu.merge_files(files_dict, labels)
 
     # Load model & normalizer
-    model = load_model('./model/model_juan_fuse.h5')
-    normalizer = pickle.load(open('./model/normalizer_juan_fuse.pic','rb'))
+    model = load_model('model/old/model_juan_fuse.h5')
+    normalizer = pickle.load(open('model/old/normalizer_juan_fuse.pic', 'rb'))
     global_mean = normalizer['mean']
     global_std = normalizer['std']
 

@@ -5,6 +5,8 @@ import pandas as pd
 from tensorflow.keras.models import load_model
 import matplotlib.pyplot as plt
 import re
+import numpy as np
+
 def load_files(path,labels):
     files_dict = {}
     for file in path.rglob("*.txt"):
@@ -18,33 +20,35 @@ def load_files(path,labels):
     return files_dict
 
 def main():
-    path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\fusefeatures\UJing\S03-validation')
+    path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\fusefeatures\UJuan\S8-Validation-2')
     labels = ['NeedlePassing', 'BloodNeedle']
 
     files_dict = load_files(path, labels)
 
 
     # Load model & normalizer
-    user = 'jing'
-    model = load_model('./model/model_{:}_fuse.h5'.format(user))
-    normalizer = pickle.load(open('./model/normalizer_{:}_fuse.pic'.format(user),'rb'))
+    model_name = 'all-users-9-feat'
+    model = load_model('./model/model_{:}_fuse.h5'.format(model_name))
+    normalizer = pickle.load(open('./model/normalizer_{:}_fuse.pic'.format(model_name),'rb'))
     global_mean = normalizer['mean']
     global_std = normalizer['std']
 
     #Load data
     train_files = [files_dict[key] for key in files_dict.keys()]
     test_x =  train_files[0]['X']
+
     ts_events = test_x['LSL_TIME'].values
     test_x  = test_x.drop('LSL_TIME', axis=1).values
 
     #Normalize data
+    # test_x = np.delete(test_x, 3, axis=1)
     test_x = (test_x - global_mean) / global_std
 
     #Predict
     predictions = model.predict(test_x)
 
     #Save predictions
-    pickle.dump([predictions,ts_events],open('./real_time_pred/pred_plot_{:}_fuse.pic'.format(user),'wb'))
+    pickle.dump([predictions,ts_events],open(path / 'pred_plot_{:}_fuse.pic'.format(model_name),'wb'))
 
     #Plot results
     plt.plot(predictions)
