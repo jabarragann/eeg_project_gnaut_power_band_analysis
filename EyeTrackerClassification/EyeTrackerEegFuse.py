@@ -46,11 +46,13 @@ def split_eeg_into_epochs(eeg_df,ts_events, window_size=15):
 
 def main():
     window_size = 15
-    eye_tracker_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\eyetracker\Keyu\S1')
-    eeg_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\txt\Keyu\S1')
+    eye_tracker_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Realtime-Project-IU-experiments\eyetracker\participant07\S01')
+    eeg_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Realtime-Project-IU-experiments\txt\participant07\S01')
+    dst_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Realtime-Project-IU-experiments\fusefeatures')
+
     labels = ['NeedlePassing', 'BloodNeedle']
 
-    files_dict_paths = dict(etu.search_files_on_path(eye_tracker_path))
+    files_dict_paths = dict(etu.search_files_on_path_2(eye_tracker_path))
 
     files_dict = etu.merge_files(files_dict_paths, labels)
 
@@ -91,11 +93,11 @@ def main():
         fuse_df['LSL_TIME'] = ts_events[:bandpower.shape[0]]
 
         #Save fused features
-        dst_path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\fusefeatures')
-        dst_path = dst_path / information['uid'] / information['session_folder']
-        if not dst_path.exists():
-            dst_path.mkdir(parents=True)
-        fuse_df.to_csv(dst_path/'{:}_S{:02d}_T{:02d}_{:}_fuse.txt'.format(information['uid'], information['session'],information['trial'], information['task']))
+
+        dst = dst_path / information['uid'] / information['session_folder']
+        if not dst.exists():
+            dst.mkdir(parents=True)
+        fuse_df.to_csv(dst/'{:}_S{:02d}_T{:02d}_{:}_fuse.txt'.format(information['uid'], information['session'],information['trial'], information['task']))
 
 
     x = 0

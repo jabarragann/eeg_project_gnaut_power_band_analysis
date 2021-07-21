@@ -20,14 +20,14 @@ def load_files(path,labels):
     return files_dict
 
 def main():
-    path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\fusefeatures\UJuan\S8-Validation-2')
+    path = Path(r'C:\Users\asus\OneDrive - purdue.edu\RealtimeProject\Experiments3-Data\CalibrationProcedure-NeedlePasssingBlood\fusefeatures\UDani\S05')
     labels = ['NeedlePassing', 'BloodNeedle']
 
     files_dict = load_files(path, labels)
 
 
     # Load model & normalizer
-    model_name = 'all-users-9-feat'
+    model_name = 'individual01-dani-real-time-exp'
     model = load_model('./model/model_{:}_fuse.h5'.format(model_name))
     normalizer = pickle.load(open('./model/normalizer_{:}_fuse.pic'.format(model_name),'rb'))
     global_mean = normalizer['mean']

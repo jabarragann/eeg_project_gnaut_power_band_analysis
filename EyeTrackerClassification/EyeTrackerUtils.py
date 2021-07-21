@@ -147,6 +147,20 @@ def search_files_on_path(path):
 
     return files_dict
 
+def search_files_on_path_2(path):
+    # organize files
+    files_dict = defaultdict(lambda: defaultdict(str))
+    for file in path.rglob("*.txt"):
+        print(file.name)
+        trial_task = re.findall('S[0-9]{2}_T[0-9]{2}_[^_]+_', file.name)[0]
+        f_type = re.findall('(?<=_)[a-zA-Z]+(?=.txt)', file.name)[0]
+
+        print(trial_task, f_type)
+
+        files_dict[trial_task][f_type] = file
+
+    return files_dict
+
 def get_data(files):
     results = []
     for df in files:
@@ -166,7 +180,7 @@ def get_data_single_file(df, window_size=None):
     epochs, events_ts = split_into_epochs(df, window_size=window_size)
     for i in range(len(epochs) - 1):
         e = epochs[i]
-        r = create_feature(e)
+        r = create_feature(e,i)
         r['pd'] = e['pd'].mean()
         r['LABEL'] = e['LABEL'].mean()
         results.append(r)
@@ -174,21 +188,27 @@ def get_data_single_file(df, window_size=None):
 
     return results.iloc[:, :-1], results.iloc[:, -1], events_ts[:-1]
 
-def create_feature(df):
-    detector = fixation_dector(df['gpx'].values, df['gpy'].values, df['LSL_TIME'].values * 1000)
-    fix_array = detector.fixation_dection(mindur=85)
-    fix_array = np.array(fix_array)
+def create_feature(df, epoch_id):
+    try:
+        detector = fixation_dector(df['gpx'].values, df['gpy'].values, df['LSL_TIME'].values * 1000)
+        fix_array = detector.fixation_dection(mindur=85)
+        fix_array = np.array(fix_array)
 
-    fix_pos = fix_array[:, [3, 4]]
-    nni = NNI(fix_pos, (1, 1))
+        fix_pos = fix_array[:, [3, 4]]
+        nni = NNI(fix_pos, (1, 1))
 
-    nni_value = nni.compute()
-    ssp = detector.scanpath_eye(mindur=85)
-    numb_of_fixations = fix_array.shape[0]
-    average_fix = fix_array[:, 2].mean()
+        nni_value = nni.compute()
+        ssp = detector.scanpath_eye(mindur=85)
+        numb_of_fixations = fix_array.shape[0]
+        average_fix = fix_array[:, 2].mean()
 
-    results = pd.DataFrame(np.array([numb_of_fixations,average_fix,ssp,nni_value]).reshape(1,4)
-                           ,columns=["number_of_fix","average_fix","ssp","nni_value"])
+        results = pd.DataFrame(np.array([numb_of_fixations,average_fix,ssp,nni_value]).reshape(1,4)
+                               ,columns=["number_of_fix","average_fix","ssp","nni_value"])
+    except Exception:
+        print("Error with epoch {:}".format(epoch_id))
+        input("Press enter to continue ")
+        results = pd.DataFrame(np.array([0,0,0,0]).reshape(1, 4)
+                               , columns=["number_of_fix", "average_fix", "ssp", "nni_value"])
     return results
 
 def split_into_epochs(df, sliding_window_step=4, window_size=15):
